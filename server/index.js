@@ -449,15 +449,11 @@ app.post('/api/upload', auth, upload.single('file'), function (req, res) {
 
 // ===================== STATIC FILES =====================
 
-app.use(express.static(path.join(__dirname, '..')));
+app.use(express.static(path.join(__dirname, '..'), { index: ['index.html', 'app.html'] }));
 
 app.get('*', function (req, res) {
   if (req.path.startsWith('/api/') || req.path.startsWith('/uploads/')) {
     return res.status(404).json({ error: 'Not found' });
-  }
-  const filePath = path.join(__dirname, '..', req.path === '/' ? 'index.html' : req.path);
-  if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
-    return res.sendFile(filePath);
   }
   res.sendFile(path.join(__dirname, '..', 'index.html'));
 });
