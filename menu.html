@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Cardápio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/estilo.css">
+  <script src="js/qrcode.min.js"></script>
+</head>
+<body>
+  <div id="menu-root">
+    <div id="loading-state" class="loading-state">
+      <div class="loading-spinner"></div>
+      <p>Carregando cardápio...</p>
+    </div>
+    <div id="error-state" class="error-state" style="display:none;">
+      <div class="error-icon">!</div>
+      <h2>Restaurante não encontrado</h2>
+      <p>O link que você acessou não está disponível.</p>
+      <a href="index.html" class="back-link">Voltar ao início</a>
+    </div>
+  </div>
+
+  <div id="cart-drawer" class="cart-drawer">
+    <div class="cart-backdrop"></div>
+    <div class="cart-panel">
+      <div class="cart-header">
+        <h3 class="cart-title">Seu Pedido</h3>
+        <button class="cart-close" id="cart-close-btn">&times;</button>
+      </div>
+      <div class="cart-items" id="cart-items">
+        <div class="cart-empty">
+          <p>Seu carrinho está vazio</p>
+        </div>
+      </div>
+      <div class="cart-footer" id="cart-footer" style="display:none;">
+        <div class="cart-total">
+          <span>Total</span>
+          <span class="cart-total-value" id="cart-total-value">R$ 0,00</span>
+        </div>
+        <button class="cart-submit" id="cart-submit-btn">Enviar Pedido</button>
+      </div>
+    </div>
+  </div>
+
+  <button id="cart-fab" class="cart-fab" style="display:none;">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
+      <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+    </svg>
+    <span class="cart-fab-badge" id="cart-fab-badge">0</span>
+  </button>
+
+  <div id="toast-container" class="toast-container"></div>
+
+  <script src="js/config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/menu.js"></script>
+</body>
+</html>

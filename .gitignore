@@ -1,0 +1,7 @@
+node_modules/
+.env
+*.log
+data/menuai.db
+uploads/*
+!uploads/.gitkeep
+.DS_Store

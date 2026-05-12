@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MENUAI - Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/estilo.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <a href="#/" class="sidebar-logo">
+          <span class="logo-meni">MENU</span><span class="logo-ai">AI</span>
+        </a>
+      </div>
+      <nav class="sidebar-nav" id="sidebar-nav">
+        <div class="sidebar-section">
+          <span class="sidebar-section-title">Menu</span>
+          <a href="#/" class="sidebar-link" data-route="dashboard">
+            <span class="sidebar-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="7" height="9" rx="1"/>
+                <rect x="14" y="3" width="7" height="5" rx="1"/>
+                <rect x="14" y="12" width="7" height="9" rx="1"/>
+                <rect x="3" y="16" width="7" height="5" rx="1"/>
+              </svg>
+            </span>
+            <span>Dashboard</span>
+          </a>
+          <a href="#/config" class="sidebar-link config-link" data-route="config">
+            <span class="sidebar-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/>
+              </svg>
+            </span>
+            <span>Configurações</span>
+          </a>
+          <a href="#/products" class="sidebar-link" data-route="products">
+            <span class="sidebar-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+                <line x1="3" y1="6" x2="21" y2="6"/>
+                <path d="M16 10a4 4 0 0 1-8 0"/>
+              </svg>
+            </span>
+            <span>Produtos</span>
+          </a>
+        </div>
+        <div class="sidebar-section admin-only" style="display:none" id="admin-sidebar-section">
+          <span class="sidebar-section-title">Administração</span>
+          <a href="#/admin" class="sidebar-link" data-route="admin">
+            <span class="sidebar-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                <polyline points="9 22 9 12 15 12 15 22"/>
+              </svg>
+            </span>
+            <span>Restaurantes</span>
+          </a>
+          <a href="#/admin/config" class="sidebar-link" data-route="admin-config">
+            <span class="sidebar-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
+              </svg>
+            </span>
+            <span>Admin</span>
+          </a>
+        </div>
+      </nav>
+      <div class="sidebar-footer">
+        <a href="#" class="sidebar-link sidebar-logout" id="nav-sair">
+          <span class="sidebar-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+              <polyline points="16 17 21 12 16 7"/>
+              <line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
+          </span>
+          <span>Sair</span>
+        </a>
+      </div>
+    </aside>
+
+    <div class="main-wrapper">
+      <header class="app-header" id="app-header">
+        <div class="header-inner">
+          <button class="sidebar-toggle" id="sidebar-toggle">
+            <span></span>
+            <span></span>
+            <span></span>
+          </button>
+          <div class="header-right">
+            <div class="restaurant-info-header" id="restaurant-info-header"></div>
+            <a href="#" class="btn btn-primary btn-sm" id="btn-dashboard-view-menu" target="_blank" style="display:none">Ver Cardápio</a>
+          </div>
+        </div>
+      </header>
+
+      <main class="app-main" id="app-main">
+
+      <!-- Dashboard View -->
+      <section class="view-section" id="view-dashboard" style="display:none">
+        <div class="view-header">
+          <h1>Dashboard</h1>
+        </div>
+        <div class="stats-grid" id="stats-grid">
+          <div class="stat-card" id="stat-visualizacoes">
+            <div class="stat-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </div>
+            <div class="stat-content">
+              <span class="stat-value" id="stat-visualizacoes-value">0</span>
+              <span class="stat-label">Visualizações</span>
+            </div>
+          </div>
+          <div class="stat-card" id="stat-whatsapp">
+            <div class="stat-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+            </div>
+            <div class="stat-content">
+              <span class="stat-value" id="stat-whatsapp-value">0</span>
+              <span class="stat-label">Cliques WhatsApp</span>
+            </div>
+          </div>
+          <div class="stat-card stat-card-product" id="stat-produtos-total">
+            <div class="stat-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+            </div>
+            <div class="stat-content">
+              <span class="stat-value" id="stat-produtos-total-value">0</span>
+              <span class="stat-label">Total Produtos</span>
+            </div>
+          </div>
+          <div class="stat-card stat-card-success" id="stat-produtos-ativos">
+            <div class="stat-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            </div>
+            <div class="stat-content">
+              <span class="stat-value" id="stat-produtos-ativos-value">0</span>
+              <span class="stat-label">Produtos Ativos</span>
+            </div>
+          </div>
+          <div class="stat-card stat-card-warning" id="stat-produtos-inativos">
+            <div class="stat-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+            </div>
+            <div class="stat-content">
+              <span class="stat-value" id="stat-produtos-inativos-value">0</span>
+              <span class="stat-label">Produtos Inativos</span>
+            </div>
+          </div>
+          <div class="stat-card stat-card-highlight" id="stat-produtos-destaque">
+            <div class="stat-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            </div>
+            <div class="stat-content">
+              <span class="stat-value" id="stat-produtos-destaque-value">0</span>
+              <span class="stat-label">Em Destaque</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="dashboard-charts">
+          <div class="chart-card">
+            <h3>Produtos por Categoria</h3>
+            <div class="chart-container" id="chart-categorias">
+              <div class="empty-state">Carregando...</div>
+            </div>
+          </div>
+          <div class="chart-card">
+            <h3>Distribuição de Produtos</h3>
+            <div class="chart-container" id="chart-distribuicao">
+              <div class="empty-state">Carregando...</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-block">
+          <h2>Informações de Contato</h2>
+          <div class="contact-info" id="contact-info">
+            <div class="empty-state">Carregando...</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Products View -->
+      <section class="view-section" id="view-products" style="display:none">
+        <div class="view-header">
+          <h1>Produtos</h1>
+          <button class="btn btn-primary" id="btn-novo-produto">+ Novo Produto</button>
+        </div>
+        <div class="products-toolbar">
+          <input type="text" class="search-input" id="prod-search" placeholder="Buscar produtos...">
+          <select class="filter-select" id="prod-filter-status">
+            <option value="all">Todos</option>
+            <option value="active">Ativos</option>
+            <option value="inactive">Inativos</option>
+          </select>
+          <select class="filter-select" id="prod-filter-categoria">
+            <option value="all">Todas Categorias</option>
+          </select>
+        </div>
+        <div class="products-list" id="products-list">
+          <div class="empty-state">Carregando produtos...</div>
+        </div>
+        <div class="pagination" id="prod-pagination"></div>
+      </section>
+
+      <!-- Config View -->
+      <section class="view-section" id="view-config" style="display:none">
+        <div class="view-header">
+          <h1>Configurações do Restaurante</h1>
+        </div>
+        <div class="config-layout">
+          <div class="section-block">
+            <form id="config-restaurant-form" class="config-form">
+              <div class="form-group">
+                <label for="config-nome">Nome do Restaurante</label>
+                <input type="text" id="config-nome" class="form-input" required>
+              </div>
+              <div class="form-group">
+                <label for="config-telefone">Telefone</label>
+                <input type="text" id="config-telefone" class="form-input">
+              </div>
+              <div class="form-group">
+                <label for="config-categoria">Categoria</label>
+                <select id="config-categoria" class="form-input">
+                  <option value="">Selecione...</option>
+                  <option value="pizzaria">Pizzaria</option>
+                  <option value="hamburgueria">Hamburgueria</option>
+                  <option value="brasileira">Comida Brasileira</option>
+                  <option value="japonesa">Comida Japonesa</option>
+                  <option value="italiana">Comida Italiana</option>
+                  <option value="mexicana">Comida Mexicana</option>
+                  <option value="arabe">Comida Árabe</option>
+                  <option value="acai">Açaí & Sorvetes</option>
+                  <option value="padaria">Padaria & Confeitaria</option>
+                  <option value="churrascaria">Churrascaria</option>
+                  <option value="lanchonete">Lanchonete</option>
+                  <option value="cafe">Café & Bistrô</option>
+                  <option value="pub">Pub & Bar</option>
+                  <option value="asiatica">Comida Asiática</option>
+                  <option value="indiana">Comida Indiana</option>
+                  <option value="thai">Comida Tailandesa</option>
+                  <option value="coreana">Comida Coreana</option>
+                  <option value="chinesa">Comida Chinesa</option>
+                  <option value="francesa">Comida Francesa</option>
+                  <option value="grega">Comida Grega</option>
+                  <option value="espanhola">Comida Espanhola</option>
+                  <option value="portuguesa">Comida Portuguesa</option>
+                  <option value="alemã">Comida Alemã</option>
+                  <option value="americana">Comida Americana</option>
+                  <option value="vegana">Comida Vegana</option>
+                  <option value="vegetariana">Vegetariano</option>
+                  <option value="fitness">Fitness & Saudável</option>
+                  <option value="marisqueira">Marisqueira & Frutos do Mar</option>
+                  <option value="peixaria">Peixaria</option>
+                  <option value="carnes">Carnes & Steaks</option>
+                  <option value="rodizio">Rodízio</option>
+                  <option value=" Buffet">Buffet & Selbstservice</option>
+                  <option value="delivery">Delivery & Fast Food</option>
+                  <option value="doceria">Doceria & Confeitaria</option>
+                  <option value="sorveteria">Sorveteria</option>
+                  <option value="bebidas">Bebidas & Drinks</option>
+                  <option value="petiscos">Petiscos & Tapas</option>
+                  <option value="crepe">Crepes & Waffles</option>
+                  <option value="panqueque">Panquecaria</option>
+                  <option value="massas">Massas & Ravióli</option>
+                  <option value="espetinho">Espetinho & Churrasquinho</option>
+                  <option value="tapiocaria">Tapiocaria</option>
+                  <option value="cuscuz">Cuscuz & Sanduicheira</option>
+                  <option value="outros">Outros</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="config-logo">Logo</label>
+                <div class="image-upload-wrapper">
+                  <img id="config-logo-preview" class="image-preview" style="display:none" alt="Logo preview">
+                  <input type="file" id="config-logo" accept="image/*" class="form-file-input">
+                  <label for="config-logo" class="btn btn-secondary">Escolher Logo</label>
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="config-banner">Banner</label>
+                <div class="image-upload-wrapper">
+                  <img id="config-banner-preview" class="image-preview" style="display:none" alt="Banner preview">
+                  <input type="file" id="config-banner" accept="image/*" class="form-file-input">
+                  <label for="config-banner" class="btn btn-secondary">Escolher Banner</label>
+                </div>
+              </div>
+              <button type="submit" class="btn btn-primary" id="btn-save-config">Salvar Configurações</button>
+            </form>
+          </div>
+          <div class="section-block">
+            <h2>QR Code do Menu</h2>
+            <div class="qrcode-section" id="qrcode-section">
+              <div id="qrcode-container"></div>
+              <div class="qrcode-actions">
+                <button class="btn btn-primary" id="btn-download-qrcode">Download PNG</button>
+                <button class="btn btn-secondary" id="btn-copy-link">Copiar Link</button>
+                <a href="#" class="btn btn-primary" id="btn-view-menu" target="_blank" style="display:none">Ver Cardápio</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Admin View -->
+      <section class="view-section" id="view-admin" style="display:none">
+        <div class="view-header">
+          <h1>Admin - Restaurantes</h1>
+          <button class="btn btn-primary" id="btn-novo-restaurante">+ Novo Restaurante</button>
+        </div>
+        <div class="section-block">
+          <div class="admin-stats-grid" id="admin-stats-grid">
+            <div class="stat-card mini">
+              <span class="stat-value" id="admin-stat-total">0</span>
+              <span class="stat-label">Total</span>
+            </div>
+            <div class="stat-card mini">
+              <span class="stat-value" id="admin-stat-active">0</span>
+              <span class="stat-label">Ativos</span>
+            </div>
+            <div class="stat-card mini">
+              <span class="stat-value" id="admin-stat-inactive">0</span>
+              <span class="stat-label">Inativos</span>
+            </div>
+          </div>
+        </div>
+        <div class="section-block">
+          <h2>Lista de Restaurantes</h2>
+          <div class="table-responsive">
+            <table class="data-table" id="admin-restaurants-table">
+              <thead>
+                <tr>
+                  <th>Nome</th>
+                  <th>Slug</th>
+                  <th>Plano</th>
+                  <th>Status</th>
+                  <th>Criado em</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="admin-restaurants-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Admin Config View -->
+      <section class="view-section" id="view-admin-config" style="display:none">
+        <div class="view-header">
+          <h1>Configurações Administrativas</h1>
+        </div>
+        <div class="section-block">
+          <form id="admin-config-form" class="config-form">
+            <div class="form-group">
+              <label for="admin-cfg-phone">Telefone</label>
+              <input type="text" id="admin-cfg-phone" class="form-input">
+            </div>
+            <div class="form-group">
+              <label for="admin-cfg-whatsapp">WhatsApp</label>
+              <input type="text" id="admin-cfg-whatsapp" class="form-input">
+            </div>
+            <div class="form-group">
+              <label for="admin-cfg-email">E-mail</label>
+              <input type="email" id="admin-cfg-email" class="form-input">
+            </div>
+            <div class="form-group">
+              <label for="admin-cfg-hours">Horário de Funcionamento</label>
+              <textarea id="admin-cfg-hours" class="form-input" rows="3"></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Salvar Configurações</button>
+          </form>
+        </div>
+      </section>
+
+      <!-- Admin Edit Restaurant View -->
+      <section class="view-section" id="view-admin-restaurant" style="display:none">
+        <div class="view-header">
+          <h1>Editar Restaurante</h1>
+          <a href="#/admin" class="btn btn-secondary">← Voltar</a>
+        </div>
+        <div class="section-block">
+          <form id="admin-restaurant-form" class="config-form">
+            <div class="form-group">
+              <label for="admin-rest-nome">Nome</label>
+              <input type="text" id="admin-rest-nome" class="form-input" required>
+            </div>
+            <div class="form-group">
+              <label for="admin-rest-slug">Slug</label>
+              <input type="text" id="admin-rest-slug" class="form-input" required>
+            </div>
+            <div class="form-group">
+              <label for="admin-rest-telefone">Telefone</label>
+              <input type="text" id="admin-rest-telefone" class="form-input">
+            </div>
+            <div class="form-group">
+              <label for="admin-rest-categoria">Categoria</label>
+              <select id="admin-rest-categoria" class="form-input">
+                <option value="">Selecione...</option>
+                <option value="pizzaria">Pizzaria</option>
+                <option value="hamburgueria">Hamburgueria</option>
+                <option value="brasileira">Comida Brasileira</option>
+                <option value="japonesa">Comida Japonesa</option>
+                <option value="italiana">Comida Italiana</option>
+                <option value="mexicana">Comida Mexicana</option>
+                <option value="arabe">Comida Árabe</option>
+                <option value="acai">Açaí & Sorvetes</option>
+                <option value="padaria">Padaria & Confeitaria</option>
+                <option value="churrascaria">Churrascaria</option>
+                <option value="lanchonete">Lanchonete</option>
+                <option value="cafe">Café & Bistrô</option>
+                <option value="pub">Pub & Bar</option>
+                <option value="asiatica">Comida Asiática</option>
+                <option value="indiana">Comida Indiana</option>
+                <option value="thai">Comida Tailandesa</option>
+                <option value="coreana">Comida Coreana</option>
+                <option value="chinesa">Comida Chinesa</option>
+                <option value="francesa">Comida Francesa</option>
+                <option value="grega">Comida Grega</option>
+                <option value="espanhola">Comida Espanhola</option>
+                <option value="portuguesa">Comida Portuguesa</option>
+                <option value="alemã">Comida Alemã</option>
+                <option value="americana">Comida Americana</option>
+                <option value="vegana">Comida Vegana</option>
+                <option value="vegetariana">Vegetariano</option>
+                <option value="fitness">Fitness & Saudável</option>
+                <option value="marisqueira">Marisqueira & Frutos do Mar</option>
+                <option value="peixaria">Peixaria</option>
+                <option value="carnes">Carnes & Steaks</option>
+                <option value="rodizio">Rodízio</option>
+                <option value="buffet">Buffet & Selbstservice</option>
+                <option value="delivery">Delivery & Fast Food</option>
+                <option value="doceria">Doceria & Confeitaria</option>
+                <option value="sorveteria">Sorveteria</option>
+                <option value="bebidas">Bebidas & Drinks</option>
+                <option value="petiscos">Petiscos & Tapas</option>
+                <option value="crepe">Crepes & Waffles</option>
+                <option value="panqueque">Panquecaria</option>
+                <option value="massas">Massas & Ravióli</option>
+                <option value="espetinho">Espetinho & Churrasquinho</option>
+                <option value="tapiocaria">Tapiocaria</option>
+                <option value="cuscuz">Cuscuz & Sanduicheira</option>
+                <option value="outros">Outros</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="admin-rest-plano">Plano</label>
+              <select id="admin-rest-plano" class="form-input">
+                <option value="starter">Starter</option>
+                <option value="pro">Pro</option>
+                <option value="ultra">Ultra</option>
+              </select>
+            </div>
+            <div class="form-group checkbox-group">
+              <label>
+                <input type="checkbox" id="admin-rest-active"> Restaurante Ativo
+              </label>
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary">Salvar</button>
+              <button type="button" class="btn btn-danger" id="btn-admin-delete-restaurant">Excluir Restaurante</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+    </main>
+    </div>
+
+    <!-- Product Modal -->
+    <div class="modal-overlay" id="modal-product" style="display:none">
+      <div class="modal-content modal-lg">
+        <div class="modal-header">
+          <h2 id="modal-product-title">Novo Produto</h2>
+          
+        </div>
+        <div class="modal-body">
+          <form id="product-form" class="config-form">
+            <input type="hidden" id="prod-id">
+            <div class="form-group">
+              <label for="prod-nome">Nome do Produto</label>
+              <input type="text" id="prod-nome" class="form-input" required>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="prod-preco">Preço (R$)</label>
+                <input type="number" id="prod-preco" class="form-input" step="0.01" min="0" inputmode="decimal" required>
+              </div>
+              <div class="form-group">
+                <label for="prod-categoria">Categoria</label>
+                <select id="prod-categoria" class="form-input"></select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="prod-gourmet">Nome Gourmet</label>
+              <input type="text" id="prod-gourmet" class="form-input" placeholder="Ex: Burguer Artesanal Trufado">
+            </div>
+            <div class="form-group">
+              <label for="prod-descricao">Descrição</label>
+              <textarea id="prod-descricao" class="form-input" rows="3"></textarea>
+            </div>
+<div class="form-row">
+              <div class="form-group checkbox-group">
+                <label>
+                  <input type="checkbox" id="prod-promocao"> Produto em Promoção
+                </label>
+              </div>
+              <div class="form-group" id="prod-preco-antigo-wrap" style="display:none">
+                <label for="prod-preco-antigo">Preço Anterior (R$)</label>
+                <input type="number" id="prod-preco-antigo" class="form-input" step="0.01" min="0" inputmode="decimal" placeholder="Preço sem desconto">
+              </div>
+            </div>
+            <div class="form-group checkbox-group">
+              <label>
+                <input type="checkbox" id="prod-destaque"> Produto em Destaque
+              </label>
+            </div>
+            <div class="form-group">
+              <label for="prod-image">Imagem do Produto</label>
+              <input type="file" id="prod-image" accept="image/*" class="form-file-input">
+              <img id="prod-image-preview" style="display:none; max-width: 200px; margin-top: 10px; border-radius: 3px;">
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary" id="btn-save-product">Salvar Produto</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Delete Product Modal -->
+    <div class="modal-overlay" id="modal-delete-product" style="display:none">
+      <div class="modal-content modal-sm">
+        <div class="modal-header">
+          <h2>Excluir Produto</h2>
+          
+        </div>
+        <div class="modal-body">
+          <p>Tem certeza que deseja excluir o produto <strong id="delete-product-name"></strong>?</p>
+          <input type="hidden" id="delete-product-id">
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary modal-close" data-modal="modal-delete-product">Cancelar</button>
+          <button class="btn btn-danger" id="btn-confirm-delete-product">Excluir</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- QR Code Modal -->
+    <div class="modal-overlay" id="modal-qrcode" style="display:none">
+      <div class="modal-content modal-sm">
+        <div class="modal-header">
+          <h2>QR Code do Menu</h2>
+          
+        </div>
+        <div class="modal-body">
+          <div id="modal-qrcode-container"></div>
+          <div class="qrcode-actions">
+            <button class="btn btn-primary" id="btn-download-modal-qr">Download PNG</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Admin Restaurant Modal -->
+    <div class="modal-overlay" id="modal-admin-restaurant" style="display:none">
+      <div class="modal-content modal-md">
+        <div class="modal-header">
+          <h2>Novo Restaurante</h2>
+          
+        </div>
+        <div class="modal-body">
+          <form id="admin-restaurant-create-form" class="config-form">
+            <div class="form-group">
+              <label for="mod-rest-nome">Nome</label>
+              <input type="text" id="mod-rest-nome" class="form-input" required>
+            </div>
+            <div class="form-group">
+              <label for="mod-rest-slug">Slug</label>
+              <input type="text" id="mod-rest-slug" class="form-input" required>
+            </div>
+            <div class="form-group">
+              <label for="mod-rest-email">E-mail do proprietário</label>
+              <input type="email" id="mod-rest-email" class="form-input">
+            </div>
+            <div class="form-group">
+              <label for="mod-rest-plano">Plano</label>
+              <select id="mod-rest-plano" class="form-input">
+                <option value="starter">Starter</option>
+                <option value="pro">Pro</option>
+                <option value="ultra">Ultra</option>
+              </select>
+            </div>
+            <button type="submit" class="btn btn-primary">Criar Restaurante</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Delete Restaurant Modal -->
+    <div class="modal-overlay" id="modal-delete-restaurant" style="display:none">
+      <div class="modal-content modal-sm">
+        <div class="modal-header">
+          <h2>Excluir Restaurante</h2>
+          
+        </div>
+        <div class="modal-body">
+          <p>Tem certeza que deseja excluir o restaurante <strong id="delete-rest-name"></strong>?</p>
+          <input type="hidden" id="delete-rest-id">
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary modal-close" data-modal="modal-delete-restaurant">Cancelar</button>
+          <button class="btn btn-danger" id="btn-confirm-delete-restaurant">Excluir</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI Result Modal -->
+    <div class="modal-overlay" id="ai-result-modal" style="display:none">
+      <div class="modal-content modal-md">
+        <div class="modal-header">
+          <h2>Descrição Gerada por IA</h2>
+          
+        </div>
+        <div class="modal-body">
+          <div id="ai-result-content"></div>
+          <div class="form-actions">
+            <button class="btn btn-primary" id="btn-use-ai-result">Usar Descrição</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="js/qrcode.min.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/ai.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

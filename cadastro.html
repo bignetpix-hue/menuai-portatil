@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cadastro - MENUAI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/estilo.css">
+<script src="js/config.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+</head>
+<body>
+<div class="auth-page">
+  <div class="auth-sidebar">
+    <div class="auth-sidebar-content">
+      <div class="app-logo" style="margin-bottom:24px"><strong>MENU</strong>AI</div>
+      <h1>Crie seu cardápio digital</h1>
+      <p>Grátis para começar. Em segundos seu restaurante está online com QR Code e pedidos via WhatsApp.</p>
+    </div>
+  </div>
+  <div class="auth-form-wrap">
+    <div class="auth-form">
+      <h2>Criar conta</h2>
+      <p>Preencha os dados do seu restaurante.</p>
+      <form id="cadastro-form">
+        <div class="form-group">
+          <label class="form-label" for="nome">Nome do Restaurante</label>
+          <input class="form-input" id="nome" type="text" placeholder="Ex: Sabor Grill" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="whatsapp">WhatsApp</label>
+          <input class="form-input" id="whatsapp" type="tel" placeholder="Ex: 11999999999" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="categoria">Categoria</label>
+          <select class="form-input" id="categoria">
+            <option value="">Selecione...</option>
+            <option value="Brasileira">Brasileira</option>
+            <option value="Italiana">Italiana</option>
+            <option value="Japonesa">Japonesa</option>
+            <option value="Mexicana">Mexicana</option>
+            <option value="Árabe">Árabe</option>
+            <option value="Fast Food">Fast Food</option>
+            <option value="Pizzaria">Pizzaria</option>
+            <option value="Lanches">Lanches</option>
+            <option value="Padaria">Padaria</option>
+            <option value="Outros">Outros</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="email">Email</label>
+          <input class="form-input" id="email" type="email" placeholder="seu@email.com" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="password">Senha</label>
+          <input class="form-input" id="password" type="password" placeholder="Mínimo 6 caracteres" minlength="6" required>
+        </div>
+        <div id="cadastro-error" class="form-error" style="display:none;margin-bottom:16px"></div>
+        <button type="submit" class="btn btn-primary btn-block btn-lg" id="cadastro-btn">Criar Conta</button>
+      </form>
+      <div class="auth-link">Já tem conta? <a href="login.html">Entrar</a></div>
+    </div>
+  </div>
+</div>
+<script>
+document.getElementById('cadastro-form').addEventListener('submit', function (e) {
+  e.preventDefault();
+  var data = {
+    nome: document.getElementById('nome').value,
+    whatsapp: document.getElementById('whatsapp').value,
+    email: document.getElementById('email').value,
+    password: document.getElementById('password').value,
+    categoria: document.getElementById('categoria').value
+  };
+  var btn = document.getElementById('cadastro-btn');
+  var errEl = document.getElementById('cadastro-error');
+  errEl.style.display = 'none';
+  btn.disabled = true;
+  btn.textContent = 'Criando conta...';
+  register(data).then(function () {
+    window.location.href = 'app.html';
+  }).catch(function (err) {
+    errEl.textContent = err.message;
+    errEl.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'Criar Conta';
+  });
+});
+</script>
+</body>
+</html>

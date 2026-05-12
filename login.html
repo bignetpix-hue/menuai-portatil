@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Entrar - MENUAI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/estilo.css">
+<script src="js/config.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+</head>
+<body>
+<div class="auth-page">
+  <div class="auth-sidebar">
+    <div class="auth-sidebar-content">
+      <div class="app-logo" style="margin-bottom:24px"><strong>MENU</strong>AI</div>
+      <h1>Bem-vindo de volta</h1>
+      <p>Acesse seu painel para gerenciar seu cardápio digital, ver analytics e muito mais.</p>
+    </div>
+  </div>
+  <div class="auth-form-wrap">
+    <div class="auth-form">
+      <h2>Entrar</h2>
+      <p>Entre com seus dados para acessar o painel.</p>
+      <form id="login-form">
+        <div class="form-group">
+          <label class="form-label" for="email">Email</label>
+          <input class="form-input" id="email" type="email" placeholder="seu@email.com" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="password">Senha</label>
+          <input class="form-input" id="password" type="password" placeholder="Sua senha" required>
+        </div>
+        <div id="login-error" class="form-error" style="display:none;margin-bottom:16px"></div>
+        <button type="submit" class="btn btn-primary btn-block btn-lg" id="login-btn">Entrar</button>
+      </form>
+      <div class="auth-link">Não tem conta? <a href="cadastro.html">Cadastre-se</a></div>
+    </div>
+  </div>
+</div>
+<script>
+document.getElementById('login-form').addEventListener('submit', function (e) {
+  e.preventDefault();
+  var email = document.getElementById('email').value;
+  var password = document.getElementById('password').value;
+  var btn = document.getElementById('login-btn');
+  var errEl = document.getElementById('login-error');
+  errEl.style.display = 'none';
+  btn.disabled = true;
+  btn.textContent = 'Entrando...';
+  login(email, password).then(function () {
+    window.location.href = 'app.html';
+  }).catch(function (err) {
+    errEl.textContent = err.message;
+    errEl.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'Entrar';
+  });
+});
+</script>
+</body>
+</html>
