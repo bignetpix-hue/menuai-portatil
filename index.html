@@ -7,33 +7,579 @@
 <meta name="description" content="Crie seu cardápio digital com MENUAI. Gere QR Code, receba pedidos via WhatsApp, cardápio online grátis.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/estilo.css">
-<script src="js/config.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   RESET & BASE
+   ============================================================ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+
+:root {
+  --c-bg:        #0d0d0d;
+  --c-surface:   #161616;
+  --c-surface2:  #1e1e1e;
+  --c-border:    rgba(255,255,255,.08);
+  --c-accent:    #f97316;
+  --c-accent2:   #fb923c;
+  --c-gold:      #fbbf24;
+  --c-text:      #f5f0eb;
+  --c-muted:     #888;
+  --c-subtle:    #555;
+  --font-display: 'Syne', sans-serif;
+  --font-body:    'Instrument Sans', sans-serif;
+  --radius:       14px;
+  --radius-sm:    8px;
+  --max-w:        1160px;
+  --nav-h:        68px;
+  --transition:   .22s cubic-bezier(.4,0,.2,1);
+}
+
+body {
+  font-family: var(--font-body);
+  background: var(--c-bg);
+  color: var(--c-text);
+  line-height: 1.6;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: inherit; text-decoration: none; }
+img { display: block; max-width: 100%; }
+ul { list-style: none; }
+
+/* ============================================================
+   LAYOUT SHELL
+   ============================================================ */
+.shell {
+  width: 100%;
+  max-width: var(--max-w);
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 24px;
+  padding-right: 24px;
+}
+
+/* ============================================================
+   BUTTONS
+   ============================================================ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: var(--font-body);
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: var(--transition);
+  white-space: nowrap;
+  border: none;
+  outline: none;
+  line-height: 1;
+}
+.btn-sm  { font-size: .85rem; padding: 8px 18px; }
+.btn-md  { font-size: .95rem; padding: 12px 24px; }
+.btn-lg  { font-size: 1rem;   padding: 15px 32px; }
+.btn-block { width: 100%; }
+
+.btn-primary {
+  background: var(--c-accent);
+  color: #fff;
+}
+.btn-primary:hover { background: var(--c-accent2); transform: translateY(-1px); box-shadow: 0 8px 24px rgba(249,115,22,.35); }
+
+.btn-secondary {
+  background: transparent;
+  color: var(--c-text);
+  border: 1.5px solid var(--c-border);
+}
+.btn-secondary:hover { border-color: var(--c-accent); color: var(--c-accent); background: rgba(249,115,22,.06); }
+
+/* ============================================================
+   NAV
+   ============================================================ */
+.l-nav-wrap {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 100;
+  background: rgba(13,13,13,.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--c-border);
+}
+.l-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--nav-h);
+}
+.app-logo {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  color: var(--c-text);
+}
+.app-logo strong { color: var(--c-accent); }
+
+.l-nav-links {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.l-nav-links a {
+  font-size: .88rem;
+  font-weight: 500;
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  transition: color var(--transition);
+}
+.l-nav-links a:hover { color: var(--c-text); }
+.l-nav-links .btn { margin-left: 6px; }
+
+/* Hamburger */
+.l-hamburger {
+  display: none;
+  flex-direction: column;
+  gap: 5px;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  background: none;
+  border: none;
+}
+.l-hamburger span {
+  display: block;
+  width: 22px;
+  height: 2px;
+  background: var(--c-text);
+  border-radius: 2px;
+  transition: var(--transition);
+}
+
+/* ============================================================
+   HERO
+   ============================================================ */
+.l-hero {
+  padding-top: calc(var(--nav-h) + 80px);
+  padding-bottom: 96px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Decorative background glow */
+.l-hero::before {
+  content: '';
+  position: absolute;
+  top: -60px; left: 50%;
+  transform: translateX(-50%);
+  width: 700px; height: 500px;
+  background: radial-gradient(ellipse at center, rgba(249,115,22,.18) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.l-hero h1 {
+  font-family: var(--font-display);
+  font-size: clamp(2.6rem, 6vw, 4.2rem);
+  font-weight: 800;
+  line-height: 1.08;
+  letter-spacing: -2px;
+  color: var(--c-text);
+  margin-bottom: 24px;
+  position: relative;
+}
+.l-hero h1 span {
+  color: var(--c-accent);
+}
+.l-hero p {
+  font-size: clamp(1rem, 2vw, 1.18rem);
+  color: var(--c-muted);
+  max-width: 540px;
+  margin: 0 auto 40px;
+  line-height: 1.7;
+}
+.l-cta-group {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+/* ============================================================
+   STATS
+   ============================================================ */
+.l-stats-wrap {
+  padding-bottom: 56px;
+}
+.l-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: var(--c-border);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.l-stat-item {
+  background: var(--c-surface);
+  padding: 28px 20px;
+  text-align: center;
+}
+.l-stat-num {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--c-accent);
+  line-height: 1;
+  margin-bottom: 6px;
+}
+.l-stat-label {
+  font-size: .82rem;
+  font-weight: 500;
+  color: var(--c-muted);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+
+/* ============================================================
+   SECTION BASE
+   ============================================================ */
+.l-section { padding: 80px 0; }
+.l-section-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.8rem, 4vw, 2.6rem);
+  font-weight: 800;
+  letter-spacing: -1px;
+  text-align: center;
+  margin-bottom: 56px;
+  line-height: 1.1;
+}
+
+/* ============================================================
+   FEATURES
+   ============================================================ */
+.l-features {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+.l-feature-card {
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  padding: 32px 28px;
+  transition: border-color var(--transition), transform var(--transition), box-shadow var(--transition);
+}
+.l-feature-card:hover {
+  border-color: rgba(249,115,22,.4);
+  transform: translateY(-3px);
+  box-shadow: 0 12px 36px rgba(0,0,0,.4);
+}
+.l-feature-icon {
+  font-size: 2rem;
+  margin-bottom: 18px;
+  line-height: 1;
+}
+.l-feature-card h3 {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin-bottom: 10px;
+  color: var(--c-text);
+}
+.l-feature-card p {
+  font-size: .9rem;
+  color: var(--c-muted);
+  line-height: 1.65;
+}
+
+/* ============================================================
+   HOW IT WORKS
+   ============================================================ */
+.l-steps-section { background: var(--c-surface); border-top: 1px solid var(--c-border); border-bottom: 1px solid var(--c-border); }
+.l-steps {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0;
+  position: relative;
+}
+
+/* Connector line between steps */
+.l-steps::before {
+  content: '';
+  position: absolute;
+  top: 40px;
+  left: calc(12.5% + 20px);
+  right: calc(12.5% + 20px);
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--c-accent), var(--c-accent), var(--c-accent), transparent);
+  opacity: .3;
+}
+
+.l-step {
+  text-align: center;
+  padding: 40px 24px 36px;
+  position: relative;
+}
+.l-step-num {
+  width: 48px; height: 48px;
+  border-radius: 50%;
+  background: var(--c-accent);
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+  position: relative;
+  z-index: 1;
+  box-shadow: 0 0 0 6px var(--c-surface), 0 0 0 8px rgba(249,115,22,.2);
+}
+.l-step h3 {
+  font-family: var(--font-display);
+  font-size: .98rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: var(--c-text);
+}
+.l-step p {
+  font-size: .87rem;
+  color: var(--c-muted);
+  line-height: 1.6;
+}
+
+/* ============================================================
+   PRICING
+   ============================================================ */
+.l-pricing {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+.l-plan {
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  padding: 36px 28px;
+  transition: border-color var(--transition);
+  position: relative;
+}
+.l-plan:hover { border-color: rgba(249,115,22,.3); }
+.l-plan.featured {
+  border-color: var(--c-accent);
+  background: linear-gradient(160deg, #1e1610 0%, var(--c-surface) 60%);
+  transform: scale(1.03);
+  box-shadow: 0 0 0 1px var(--c-accent), 0 24px 64px rgba(249,115,22,.2);
+}
+.l-plan-badge {
+  position: absolute;
+  top: -14px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--c-accent);
+  color: #fff;
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  padding: 5px 16px;
+  border-radius: 99px;
+}
+.l-plan h3 {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--c-text);
+  margin-bottom: 16px;
+}
+.price {
+  font-family: var(--font-display);
+  font-size: 2.6rem;
+  font-weight: 800;
+  color: var(--c-text);
+  line-height: 1;
+  margin-bottom: 28px;
+}
+.price small {
+  font-size: .9rem;
+  font-weight: 500;
+  color: var(--c-muted);
+  font-family: var(--font-body);
+}
+.l-plan ul { margin-bottom: 28px; display: flex; flex-direction: column; gap: 10px; }
+.l-plan ul li {
+  font-size: .9rem;
+  color: var(--c-muted);
+  padding-left: 22px;
+  position: relative;
+}
+.l-plan ul li::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  color: var(--c-accent);
+  font-weight: 700;
+}
+
+/* ============================================================
+   CTA SECTION
+   ============================================================ */
+.l-cta-section {
+  background: var(--c-surface);
+  border-top: 1px solid var(--c-border);
+  border-bottom: 1px solid var(--c-border);
+  text-align: center;
+  padding: 80px 24px;
+}
+.l-cta-section h2 {
+  font-family: var(--font-display);
+  font-size: clamp(1.8rem, 4vw, 2.4rem);
+  font-weight: 800;
+  letter-spacing: -1px;
+  margin-bottom: 14px;
+  line-height: 1.1;
+}
+.l-cta-section p {
+  font-size: 1rem;
+  color: var(--c-muted);
+  margin-bottom: 32px;
+}
+
+/* ============================================================
+   FOOTER
+   ============================================================ */
+.l-footer-wrap { padding: 40px 0; }
+.l-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.l-footer p {
+  font-size: .85rem;
+  color: var(--c-subtle);
+}
+
+/* ============================================================
+   ANIMATIONS
+   ============================================================ */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(28px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.afu   { opacity: 0; animation: fadeUp .7s ease forwards; }
+.afu-1 { animation-delay: .12s; }
+.afu-2 { animation-delay: .22s; }
+
+/* ============================================================
+   RESPONSIVE — TABLET  (≤ 900px)
+   ============================================================ */
+@media (max-width: 900px) {
+  .l-features  { grid-template-columns: repeat(2, 1fr); }
+  .l-steps     { grid-template-columns: repeat(2, 1fr); }
+  .l-steps::before { display: none; }
+  .l-step      { border-bottom: 1px solid var(--c-border); }
+  .l-step:nth-child(n+3) { border-bottom: none; }
+
+  .l-pricing   { grid-template-columns: 1fr; max-width: 420px; margin: 0 auto; }
+  .l-plan.featured { transform: none; }
+
+  .l-stats     { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ============================================================
+   RESPONSIVE — MOBILE  (≤ 600px)
+   ============================================================ */
+@media (max-width: 600px) {
+  :root { --nav-h: 60px; }
+
+  .l-nav-links a:not(.btn) { display: none; }
+  .l-hamburger { display: flex; }
+
+  .l-hero { padding-top: calc(var(--nav-h) + 48px); padding-bottom: 64px; }
+  .l-hero::before { width: 340px; height: 300px; }
+
+  .l-cta-group { flex-direction: column; align-items: stretch; }
+  .l-cta-group .btn { text-align: center; }
+
+  .l-features { grid-template-columns: 1fr; }
+  .l-steps    { grid-template-columns: 1fr; }
+  .l-step     { border-bottom: 1px solid var(--c-border); }
+  .l-step:last-child { border-bottom: none; }
+
+  .l-stats    { grid-template-columns: repeat(2, 1fr); }
+  .l-stat-num { font-size: 1.6rem; }
+
+  .l-plan.featured { transform: none; }
+  .l-footer   { flex-direction: column; align-items: center; text-align: center; }
+  .l-section  { padding: 56px 0; }
+  .l-section-title { margin-bottom: 36px; }
+
+  /* Mobile nav drawer (when visible) */
+  .l-nav-links.open {
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: var(--nav-h);
+    left: 0; right: 0;
+    background: var(--c-surface);
+    border-bottom: 1px solid var(--c-border);
+    padding: 20px 24px;
+    gap: 12px;
+    z-index: 99;
+  }
+  .l-nav-links.open a { display: block; font-size: 1rem; padding: 10px 0; border-bottom: 1px solid var(--c-border); }
+  .l-nav-links.open a:last-child { border-bottom: none; }
+  .l-nav-links.open .btn { margin-left: 0; }
+}
+</style>
 </head>
 <body>
-<div class="shell">
-  <nav class="l-nav">
-    <div class="app-logo"><strong>MENU</strong>AI</div>
-    <div class="l-nav-links">
-      <a href="#funcionalidades">Funcionalidades</a>
-      <a href="#precos">Preços</a>
-      <a href="login.html">Entrar</a>
-      <a href="cadastro.html" class="btn btn-sm btn-primary">Começar Grátis</a>
-    </div>
-  </nav>
+
+<!-- ============================================================
+     NAV
+     ============================================================ -->
+<div class="l-nav-wrap">
+  <div class="shell">
+    <nav class="l-nav">
+      <div class="app-logo"><strong>MENU</strong>AI</div>
+
+      <div class="l-nav-links" id="navLinks">
+        <a href="#funcionalidades">Funcionalidades</a>
+        <a href="#precos">Preços</a>
+        <a href="login.html">Entrar</a>
+        <a href="cadastro.html" class="btn btn-sm btn-primary">Começar Grátis</a>
+      </div>
+
+      <button class="l-hamburger" id="hamburger" aria-label="Menu">
+        <span></span><span></span><span></span>
+      </button>
+    </nav>
+  </div>
 </div>
 
+<!-- ============================================================
+     HERO
+     ============================================================ -->
 <section class="l-hero shell">
   <h1 class="afu">Cardápio Digital<br><span>para o seu Restaurante</span></h1>
   <p class="afu afu-1">Crie seu menu online em segundos. Seus clientes escaneiam o QR Code, escolhem os pratos e enviam o pedido direto no WhatsApp.</p>
   <div class="l-cta-group afu afu-2">
     <a href="cadastro.html" class="btn btn-primary btn-lg">Criar Cardápio Grátis</a>
-    <a href="login.html" class="btn btn-secondary btn-lg">Já tenho conta</a>
+    <a href="login.html"    class="btn btn-secondary btn-lg">Já tenho conta</a>
   </div>
 </section>
 
-<div class="shell">
+<!-- ============================================================
+     STATS
+     ============================================================ -->
+<div class="shell l-stats-wrap">
   <div class="l-stats">
     <div class="l-stat-item"><div class="l-stat-num">12+</div><div class="l-stat-label">Restaurantes</div></div>
     <div class="l-stat-item"><div class="l-stat-num">1.5K+</div><div class="l-stat-label">Visualizações</div></div>
@@ -42,8 +588,11 @@
   </div>
 </div>
 
+<!-- ============================================================
+     FEATURES
+     ============================================================ -->
 <section id="funcionalidades" class="l-section shell">
-  <h2 class="l-section-title afu">Tudo que seu restaurante precisa</h2>
+  <h2 class="l-section-title">Tudo que seu restaurante precisa</h2>
   <div class="l-features">
     <div class="l-feature-card"><div class="l-feature-icon">📱</div><h3>Cardápio Digital</h3><p>Menu online moderno e responsivo que funciona em qualquer dispositivo. Sem aplicativo para instalar.</p></div>
     <div class="l-feature-card"><div class="l-feature-icon">📷</div><h3>QR Code</h3><p>Gere QR Code do seu cardápio. Imprima e cole na mesa. Cliente escaneia e já vê o menu.</p></div>
@@ -54,36 +603,103 @@
   </div>
 </section>
 
-<section class="l-section shell">
-  <h2 class="l-section-title afu">Como funciona</h2>
-  <div class="l-steps">
-    <div class="l-step"><div class="l-step-num">1</div><h3>Crie sua conta</h3><p>Cadastre-se gratuitamente em segundos. Sem cartão de crédito.</p></div>
-    <div class="l-step"><div class="l-step-num">2</div><h3>Adicione seus pratos</h3><p>Monte seu cardápio com fotos, descrições e preços. Use IA para descrições profissionais.</p></div>
-    <div class="l-step"><div class="l-step-num">3</div><h3>Compartilhe o QR Code</h3><p>Imprima o QR Code e cole nas mesas. Cliente escaneia e faz o pedido.</p></div>
-    <div class="l-step"><div class="l-step-num">4</div><h3>Receba pedidos</h3><p>Pedidos chegam direto no WhatsApp do restaurante. Pronto para atender!</p></div>
+<!-- ============================================================
+     HOW IT WORKS
+     ============================================================ -->
+<section class="l-section l-steps-section">
+  <div class="shell">
+    <h2 class="l-section-title">Como funciona</h2>
+    <div class="l-steps">
+      <div class="l-step"><div class="l-step-num">1</div><h3>Crie sua conta</h3><p>Cadastre-se gratuitamente em segundos. Sem cartão de crédito.</p></div>
+      <div class="l-step"><div class="l-step-num">2</div><h3>Adicione seus pratos</h3><p>Monte seu cardápio com fotos, descrições e preços. Use IA para descrições profissionais.</p></div>
+      <div class="l-step"><div class="l-step-num">3</div><h3>Compartilhe o QR Code</h3><p>Imprima o QR Code e cole nas mesas. Cliente escaneia e faz o pedido.</p></div>
+      <div class="l-step"><div class="l-step-num">4</div><h3>Receba pedidos</h3><p>Pedidos chegam direto no WhatsApp do restaurante. Pronto para atender!</p></div>
+    </div>
   </div>
 </section>
 
+<!-- ============================================================
+     PRICING
+     ============================================================ -->
 <section id="precos" class="l-section shell">
-  <h2 class="l-section-title afu">Planos</h2>
+  <h2 class="l-section-title">Planos</h2>
   <div class="l-pricing">
-    <div class="l-plan"><h3>Starter</h3><div class="price">R$ 69<small>/mês</small></div><ul><li>Cardápio digital completo</li><li>QR Code do cardápio</li><li>Pedidos via WhatsApp</li><li>Até 30 produtos</li></ul><a href="cadastro.html" class="btn btn-secondary btn-block">Começar</a></div>
-    <div class="l-plan featured"><h3>Pro</h3><div class="price">R$ 129<small>/mês</small></div><ul><li>Tudo do Starter</li><li>Descrições com IA</li><li>Produtos ilimitados</li><li>Analytics avançado</li><li>Imagens dos produtos</li></ul><a href="cadastro.html" class="btn btn-primary btn-block">Mais Popular</a></div>
-    <div class="l-plan"><h3>Ultra</h3><div class="price">R$ 249<small>/mês</small></div><ul><li>Tudo do Pro</li><li>Múltiplos cardápios</li><li>Suporte prioritário</li><li>Personalização avançada</li><li>API de integração</li></ul><a href="cadastro.html" class="btn btn-secondary btn-block">Fale Conosco</a></div>
+
+    <div class="l-plan">
+      <h3>Starter</h3>
+      <div class="price">R$ 69<small>/mês</small></div>
+      <ul>
+        <li>Cardápio digital completo</li>
+        <li>QR Code do cardápio</li>
+        <li>Pedidos via WhatsApp</li>
+        <li>Até 30 produtos</li>
+      </ul>
+      <a href="cadastro.html" class="btn btn-secondary btn-md btn-block">Começar</a>
+    </div>
+
+    <div class="l-plan featured">
+      <div class="l-plan-badge">Mais Popular</div>
+      <h3>Pro</h3>
+      <div class="price">R$ 129<small>/mês</small></div>
+      <ul>
+        <li>Tudo do Starter</li>
+        <li>Descrições com IA</li>
+        <li>Produtos ilimitados</li>
+        <li>Analytics avançado</li>
+        <li>Imagens dos produtos</li>
+      </ul>
+      <a href="cadastro.html" class="btn btn-primary btn-md btn-block">Assinar Pro</a>
+    </div>
+
+    <div class="l-plan">
+      <h3>Ultra</h3>
+      <div class="price">R$ 249<small>/mês</small></div>
+      <ul>
+        <li>Tudo do Pro</li>
+        <li>Múltiplos cardápios</li>
+        <li>Suporte prioritário</li>
+        <li>Personalização avançada</li>
+        <li>API de integração</li>
+      </ul>
+      <a href="cadastro.html" class="btn btn-secondary btn-md btn-block">Fale Conosco</a>
+    </div>
+
   </div>
 </section>
 
-<section class="l-cta-section shell">
-  <h2>Pronto para digitalizar seu cardápio?</h2>
-  <p>Comece grátis. Cancele quando quiser. Sem compromisso.</p>
-  <a href="cadastro.html" class="btn btn-primary btn-lg">Criar Cardápio Grátis</a>
-</section>
+<!-- ============================================================
+     CTA
+     ============================================================ -->
+<div class="l-cta-section">
+  <div class="shell">
+    <h2>Pronto para digitalizar seu cardápio?</h2>
+    <p>Comece grátis. Cancele quando quiser. Sem compromisso.</p>
+    <a href="cadastro.html" class="btn btn-primary btn-lg">Criar Cardápio Grátis</a>
+  </div>
+</div>
 
-<div class="shell">
+<!-- ============================================================
+     FOOTER
+     ============================================================ -->
+<div class="shell l-footer-wrap">
   <footer class="l-footer">
     <div class="app-logo"><strong>MENU</strong>AI</div>
     <p>&copy; 2026 MENUAI. Todos os direitos reservados.</p>
   </footer>
 </div>
+
+<script src="js/config.js" defer></script>
+<script>
+  // Mobile nav toggle
+  const hamburger = document.getElementById('hamburger');
+  const navLinks  = document.getElementById('navLinks');
+  hamburger.addEventListener('click', () => {
+    navLinks.classList.toggle('open');
+  });
+  // Close nav when clicking a link
+  navLinks.querySelectorAll('a').forEach(a => {
+    a.addEventListener('click', () => navLinks.classList.remove('open'));
+  });
+</script>
 </body>
 </html>

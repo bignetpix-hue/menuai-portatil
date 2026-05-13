@@ -60,5 +60,566 @@
   <script src="js/utils.js"></script>
   <script src="js/api.js"></script>
   <script src="js/menu.js"></script>
+
+<!-- Edit Modals -->
+<div id="edit-logo-banner-modal" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); justify-content:center; align-items:center; z-index:10000;">
+  <div class="modal-content" style="background:#FFFFFF; padding:24px; max-width:500px; width:90%; border-radius:16px; box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+    <h2 style="margin-top:0; color:#111111; font-size:22px; font-weight:600; padding-bottom:16px; border-bottom:1px solid #E5E5E5;">Editar Logo, Banner e Tema</h2>
+    <label style="display:block; margin-bottom:16px; color:#1A1A1A; font-weight:500; font-size:14px;">Logo:
+      <input type="file" id="edit-logo-file" accept="image/*" style="margin:8px 0; display:block;">
+      <input type="text" id="edit-logo" placeholder="Ou cole URL do logo" style="width:100%; padding:12px; border:1px solid #D4D4D4; border-radius:8px; font-size:14px; background:#FAFAFA; color:#1A1A1A;"></label>
+    <label style="display:block; margin-bottom:16px; color:#1A1A1A; font-weight:500; font-size:14px;">Banner:
+      <input type="file" id="edit-banner-file" accept="image/*" style="margin:8px 0; display:block;">
+      <input type="text" id="edit-banner" placeholder="Ou cole URL do banner" style="width:100%; padding:12px; border:1px solid #D4D4D4; border-radius:8px; font-size:14px; background:#FAFAFA; color:#1A1A1A;"></label>
+    <label style="display:block; margin-bottom:12px; color:#1A1A1A; font-weight:500; font-size:14px;">Tema do Cardápio:
+      <select id="edit-theme" onchange="updateThemePreview(this.value)" style="width:100%; padding:12px; border:1px solid #D4D4D4; border-radius:8px; margin-top:8px; font-size:14px; background:#FFFFFF; color:#1A1A1A;">
+        <option value="default">⚫ Padrão (Escuro)</option>
+        <option value="light">⚪ Claro & Minimalista</option>
+        <option value="warm">🟠 Quente & Acolhedor</option>
+      </select></label>
+    <p style="font-size:13px; color:#525252; margin-bottom:12px; font-weight:500;">Pré-visualização:</p>
+    <div id="theme-preview" style="display:flex; gap:12px; margin-bottom:20px;">
+      <div onclick="selectTheme('default')" style="width:70px; height:48px; background:linear-gradient(135deg,#0C0A07,#2a1f0e); border-radius:8px; cursor:pointer; border:3px solid #E5E5E5; transition:border-color 0.2s;" data-theme="default"></div>
+      <div onclick="selectTheme('light')" style="width:70px; height:48px; background:linear-gradient(135deg,#FAFAFA,#E5E5E5); border-radius:8px; cursor:pointer; border:3px solid #E5E5E5; transition:border-color 0.2s;" data-theme="light"></div>
+      <div onclick="selectTheme('warm')" style="width:70px; height:48px; background:linear-gradient(135deg,#FF6B35,#F7C59F); border-radius:8px; cursor:pointer; border:3px solid #E5E5E5; transition:border-color 0.2s;" data-theme="warm"></div>
+    </div>
+    <div style="margin-top:20px; display:flex; gap:12px;">
+      <button id="save-logo-banner" style="background:#16A34A; color:#FFFFFF; padding:14px 28px; border:none; border-radius:8px; cursor:pointer; font-size:15px; font-weight:600; flex:1; box-shadow:0 4px 12px rgba(22,163,74,0.3);">Salvar</button>
+      <button id="cancel-logo-banner" style="background:#FFFFFF; color:#525252; padding:14px 24px; border:1px solid #D4D4D4; border-radius:8px; cursor:pointer; font-size:15px; font-weight:500;">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<div id="edit-product-modal" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); justify-content:center; align-items:center; z-index:10000;">
+  <div class="modal-content" style="background:#FFFFFF; padding:24px; max-width:500px; width:90%; border-radius:16px; box-shadow:0 20px 60px rgba(0,0,0,0.3); max-height:90vh; overflow-y:auto;">
+    <h2 style="margin-top:0; color:#111111; font-size:22px; font-weight:600; padding-bottom:16px; border-bottom:1px solid #E5E5E5;">Editar Produto</h2>
+    <input type="hidden" id="edit-product-id">
+    <label style="display:block; margin-bottom:16px; color:#1A1A1A; font-weight:500; font-size:14px;">Nome:<br><input type="text" id="edit-product-name" style="width:100%; padding:12px; border:1px solid #D4D4D4; border-radius:8px; font-size:14px; background:#FAFAFA; color:#1A1A1A; margin-top:6px;"></label>
+    <label style="display:block; margin-bottom:16px; color:#1A1A1A; font-weight:500; font-size:14px;">Descrição:<br><textarea id="edit-product-desc" style="width:100%; padding:12px; border:1px solid #D4D4D4; border-radius:8px; font-size:14px; background:#FAFAFA; color:#1A1A1A; min-height:80px; margin-top:6px; font-family:inherit; resize:vertical;"></textarea></label>
+    <label style="display:block; margin-bottom:16px; color:#1A1A1A; font-weight:500; font-size:14px;">Preço (R$):<br><input type="number" step="0.01" id="edit-product-price" style="width:100%; padding:12px; border:1px solid #D4D4D4; border-radius:8px; font-size:14px; background:#FAFAFA; color:#1A1A1A; margin-top:6px;"></label>
+    <label style="display:block; margin-bottom:16px; color:#1A1A1A; font-weight:500; font-size:14px;">Imagem:<br>
+      <input type="file" id="edit-product-image-file" accept="image/*" style="margin:8px 0; display:block;">
+      <input type="text" id="edit-product-image" placeholder="Ou cole URL da imagem" style="width:100%; padding:12px; border:1px solid #D4D4D4; border-radius:8px; font-size:14px; background:#FAFAFA; color:#1A1A1A;"></label>
+    <label style="display:block; margin-bottom:16px; color:#1A1A1A; font-weight:500; font-size:14px;">Categoria:<br><input type="text" id="edit-product-category" style="width:100%; padding:12px; border:1px solid #D4D4D4; border-radius:8px; font-size:14px; background:#FAFAFA; color:#1A1A1A; margin-top:6px;"></label>
+    <div style="margin-top:20px; display:flex; gap:12px; flex-wrap:wrap;">
+      <button id="save-product" style="background:#16A34A; color:#FFFFFF; padding:14px 28px; border:none; border-radius:8px; cursor:pointer; font-size:15px; font-weight:600; flex:1; box-shadow:0 4px 12px rgba(22,163,74,0.3);">Salvar</button>
+      <button id="cancel-product" style="background:#FFFFFF; color:#525252; padding:14px 24px; border:1px solid #D4D4D4; border-radius:8px; cursor:pointer; font-size:15px; font-weight:500;">Cancelar</button>
+      <button id="delete-product" style="background:#DC2626; color:#FFFFFF; padding:14px 24px; border:none; border-radius:8px; cursor:pointer; font-size:15px; font-weight:600; box-shadow:0 4px 12px rgba(220,38,38,0.3);">Excluir</button>
+    </div>
+  </div>
+</div>
+
+<style>
+/* ========================================
+   SISTEMA DE CONTRASTE E HIERARQUIA
+   ======================================== */
+
+/* Tema Padrão (Escuro) */
+body.theme-default { 
+  --bg-primary: #0C0A07; 
+  --bg-secondary: #1a1612; 
+  --text-primary: #FFFFFF; 
+  --text-secondary: #D4D4D4; 
+  --accent: #16A34A; 
+  --card-bg: #252019; 
+  --border: #3d3528;
+  background: var(--bg-primary);
+}
+
+/* Tema Claro & Minimalista */
+body.theme-light { 
+  --bg-primary: #FAFAFA; 
+  --bg-secondary: #FFFFFF; 
+  --text-primary: #111111; 
+  --text-secondary: #525252; 
+  --accent: #2563EB; 
+  --card-bg: #FFFFFF; 
+  --border: #E5E5E5;
+  background: var(--bg-primary);
+}
+
+/* Tema Quente & Acolhedor */
+body.theme-warm { 
+  --bg-primary: #FFF8F0; 
+  --bg-secondary: #FFF5EB; 
+  --text-primary: #3E2723; 
+  --text-secondary: #5D4037; 
+  --accent: #FF6B35; 
+  --card-bg: #FFFFFF; 
+  --border: #FFCCBC;
+  background: var(--bg-primary);
+}
+
+/* Header */
+body.theme-default .menu-header { 
+  background: linear-gradient(135deg, #0C0A07 0%, #2a1f0e 100%); 
+  color: #FFFFFF;
+}
+body.theme-light .menu-header { 
+  background: linear-gradient(135deg, #F5F5F5 0%, #E8E8E8 100%); 
+  color: #111111;
+}
+body.theme-warm .menu-header { 
+  background: linear-gradient(135deg, #FFF3E0 0%, #FFE0B2 100%); 
+  color: #3E2723;
+}
+
+/* Nome do restaurante */
+body.theme-default .menu-name { color: #FFFFFF; }
+body.theme-light .menu-name { color: #111111; }
+body.theme-warm .menu-name { color: #3E2723; }
+
+/* Categoria */
+body.theme-default .menu-category { color: #A8A29E; }
+body.theme-light .menu-category { color: #525252; }
+body.theme-warm .menu-category { color: #5D4037; }
+
+/* Cards de produtos */
+body.theme-default .product-card { 
+  background: #252019; 
+  border: 1px solid #3d3528; 
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+}
+body.theme-light .product-card { 
+  background: #FFFFFF; 
+  border: 1px solid #E5E5E5; 
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+body.theme-warm .product-card { 
+  background: #FFFFFF; 
+  border: 1px solid #FFCCBC; 
+  box-shadow: 0 4px 16px rgba(255,107,53,0.15);
+}
+
+/* Nome do produto */
+body.theme-default .product-name { color: #FFFFFF; font-weight: 600; }
+body.theme-light .product-name { color: #111111; font-weight: 600; }
+body.theme-warm .product-name { color: #3E2723; font-weight: 600; }
+
+/* Descrição do produto */
+body.theme-default .product-desc { color: #A8A29E; }
+body.theme-light .product-desc { color: #525252; }
+body.theme-warm .product-desc { color: #5D4037; }
+
+/* Preço */
+body.theme-default .product-price { color: #16A34A; font-weight: 700; }
+body.theme-light .product-price { color: #2563EB; font-weight: 700; }
+body.theme-warm .product-price { color: #FF6B35; font-weight: 700; }
+
+/* Botão adicionar */
+body.theme-default .product-add-btn { 
+  background: #16A34A; 
+  color: #FFFFFF;
+}
+body.theme-light .product-add-btn { 
+  background: #2563EB; 
+  color: #FFFFFF;
+}
+body.theme-warm .product-add-btn { 
+  background: #FF6B35; 
+  color: #FFFFFF;
+}
+
+/* Botões de categoria */
+body.theme-default .category-btn { 
+  background: #252019; 
+  color: #A8A29E; 
+  border: 1px solid #3d3528; 
+}
+body.theme-light .category-btn { 
+  background: #FFFFFF; 
+  color: #525252; 
+  border: 1px solid #E5E5E5; 
+}
+body.theme-warm .category-btn { 
+  background: #FFFFFF; 
+  color: #5D4037; 
+  border: 1px solid #FFCCBC; 
+}
+
+body.theme-default .category-btn.active { 
+  background: #16A34A; 
+  color: #FFFFFF; 
+  border-color: #16A34A;
+}
+body.theme-light .category-btn.active { 
+  background: #2563EB; 
+  color: #FFFFFF; 
+  border-color: #2563EB;
+}
+body.theme-warm .category-btn.active { 
+  background: #FF6B35; 
+  color: #FFFFFF; 
+  border-color: #FF6B35;
+}
+
+/* Carrinho */
+body.theme-default .cart-panel { background: #1a1612; color: #FFFFFF; }
+body.theme-light .cart-panel { background: #FFFFFF; color: #111111; }
+body.theme-warm .cart-panel { background: #FFF5EB; color: #3E2723; }
+
+body.theme-default .cart-item-name { color: #FFFFFF; }
+body.theme-light .cart-item-name { color: #111111; }
+body.theme-warm .cart-item-name { color: #3E2723; }
+
+/* Fundo geral */
+body.theme-default { background-color: #0C0A07; }
+body.theme-light { background-color: #FAFAFA; }
+body.theme-warm { background-color: #FFF8F0; }
+</style>
+
+<script>
+(function() {
+  var editMode = false;
+  var currentRestaurant = null;
+  var currentProducts = [];
+
+  // Verificar se usuário está logado (dono do restaurante)
+  function isOwnerLoggedIn() {
+    return localStorage.getItem('menuai_token') !== null;
+  }
+
+  // Mostrar botão de edição apenas para o dono logado
+  function createEditButton() {
+    if (!isOwnerLoggedIn()) return;
+    
+    var editBtn = document.createElement('button');
+    editBtn.innerHTML = '✏️ <span style="font-weight:600;">Editar Cardápio</span>';
+    editBtn.style.cssText = 'position:fixed; bottom:24px; right:24px; background:#111111; color:#FFFFFF; padding:14px 24px; border:none; border-radius:30px; cursor:pointer; font-size:14px; font-weight:500; box-shadow:0 6px 20px rgba(0,0,0,0.4); z-index:9999; transition:transform 0.2s, box-shadow 0.2s;';
+    editBtn.onmouseover = function() { this.style.transform = 'translateY(-2px)'; this.style.boxShadow = '0 8px 24px rgba(0,0,0,0.5)'; };
+    editBtn.onmouseout = function() { this.style.transform = ''; this.style.boxShadow = '0 6px 20px rgba(0,0,0,0.4)'; };
+    editBtn.onclick = toggleEditMode;
+    document.body.appendChild(editBtn);
+  }
+
+  function toggleEditMode() {
+    editMode = !editMode;
+    var msg = editMode ? 'Modo edição ativado - Clique em produtos para editar' : 'Modo edição desativado';
+    showToast(msg);
+    
+    // Atualizar cursor dos elementos editáveis
+    var logoWrap = document.querySelector('.menu-logo-wrap');
+    var banner = document.querySelector('.menu-banner');
+    var productCards = document.querySelectorAll('.product-card');
+    
+    if (editMode) {
+      if (logoWrap) logoWrap.style.cursor = 'pointer';
+      if (banner) banner.style.cursor = 'pointer';
+      productCards.forEach(function(card) {
+        card.style.outline = '2px dashed #16A34A';
+      });
+    } else {
+      if (logoWrap) logoWrap.style.cursor = '';
+      if (banner) banner.style.cursor = '';
+      productCards.forEach(function(card) {
+        card.style.outline = '';
+      });
+    }
+  }
+
+  // Aplicar tema
+  function applyTheme(theme) {
+    document.body.classList.remove('theme-default', 'theme-light', 'theme-warm');
+    if (theme && theme !== 'default') {
+      document.body.classList.add('theme-' + theme);
+    }
+  }
+  
+  // Atualizar preview do tema
+  window.updateThemePreview = function(theme) {
+    document.querySelectorAll('#theme-preview > div').forEach(function(div) {
+      div.style.border = (div.dataset.theme === theme) ? '2px solid #16A34A' : '2px solid transparent';
+    });
+  };
+  
+  // Selecionar tema pelo preview
+  window.selectTheme = function(theme) {
+    document.getElementById('edit-theme').value = theme;
+    updateThemePreview(theme);
+  };
+
+  // Função para upload de imagem
+  function uploadImage(file, callback) {
+    if (!file) {
+      callback(null);
+      return;
+    }
+    
+    var formData = new FormData();
+    formData.append('file', file);
+    
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', window.__CONFIG__.apiUrl + '/api/upload');
+    xhr.setRequestHeader('Authorization', 'Bearer ' + localStorage.getItem('menuai_token'));
+    
+    xhr.onload = function() {
+      if (xhr.status === 200) {
+        var response = JSON.parse(xhr.responseText);
+        callback(window.__CONFIG__.apiUrl + response.url);
+      } else {
+        showToast('Erro ao fazer upload');
+        callback(null);
+      }
+    };
+    
+    xhr.onerror = function() {
+      showToast('Erro de rede ao fazer upload');
+      callback(null);
+    };
+    
+    xhr.send(formData);
+  }
+
+  // Abrir modal de logo/banner
+  function openLogoBannerModal() {
+    var logoImg = document.querySelector('.menu-logo img');
+    var bannerEl = document.querySelector('.menu-banner');
+    
+    document.getElementById('edit-logo').value = logoImg ? logoImg.src : '';
+    document.getElementById('edit-banner').value = bannerEl ? bannerEl.style.backgroundImage.replace(/url\(['"]?(.+?)['"]?\)/, '$1') : '';
+    
+    // Carregar tema atual
+    var savedMenu = JSON.parse(localStorage.getItem('menuEdit') || '{}');
+    document.getElementById('edit-theme').value = savedMenu.theme || 'default';
+    
+    // Atualizar visual dos botões de tema
+    document.querySelectorAll('#theme-preview > div').forEach(function(div) {
+      div.style.border = (div.dataset.theme === (savedMenu.theme || 'default')) ? '2px solid #16A34A' : '2px solid transparent';
+    });
+    
+    document.getElementById('edit-logo-banner-modal').style.display = 'flex';
+  }
+
+  // Abrir modal de editar produto
+  function openProductEditModal(product) {
+    document.getElementById('edit-product-id').value = product.id;
+    document.getElementById('edit-product-name').value = product.name || '';
+    document.getElementById('edit-product-desc').value = product.description || '';
+    document.getElementById('edit-product-price').value = product.price || '';
+    document.getElementById('edit-product-image').value = product.image_url || '';
+    document.getElementById('edit-product-category').value = product.category || '';
+    document.getElementById('edit-product-modal').style.display = 'flex';
+  }
+
+  // Salvar logo e banner
+  document.getElementById('save-logo-banner').addEventListener('click', function() {
+    var logoInput = document.getElementById('edit-logo');
+    var bannerInput = document.getElementById('edit-banner');
+    var logoFile = document.getElementById('edit-logo-file').files[0];
+    var bannerFile = document.getElementById('edit-banner-file').files[0];
+    
+    var logoUrl = logoInput.value;
+    var bannerUrl = bannerInput.value;
+    
+    // Se houver arquivo, fazer upload
+    if (logoFile) {
+      uploadImage(logoFile, function(url) {
+        if (url) logoUrl = url;
+        finishSaveLogoBanner(logoUrl, bannerUrl, bannerFile);
+      });
+    } else if (bannerFile) {
+      uploadImage(bannerFile, function(url) {
+        if (url) bannerUrl = url;
+        finishSaveLogoBanner(logoUrl, bannerUrl, bannerFile);
+      });
+    } else {
+      finishSaveLogoBanner(logoUrl, bannerUrl, null);
+    }
+  });
+  
+  function finishSaveLogoBanner(logo, banner, bannerFile) {
+    // Se banner for arquivo, fazer upload agora
+    if (bannerFile && !banner.startsWith('http')) {
+      uploadImage(bannerFile, function(url) {
+        if (url) banner = url;
+        applyLogoBannerChanges(logo, banner);
+      });
+    } else {
+      applyLogoBannerChanges(logo, banner);
+    }
+  }
+  
+  function applyLogoBannerChanges(logo, banner) {
+    if (logo) {
+      var logoImg = document.querySelector('.menu-logo img');
+      if (logoImg) logoImg.src = logo;
+    }
+    if (banner) {
+      var bannerEl = document.querySelector('.menu-banner');
+      if (bannerEl) bannerEl.style.backgroundImage = 'url(' + banner + ')';
+    }
+    
+    // Salvar tema
+    var theme = document.getElementById('edit-theme').value;
+    localStorage.setItem('menuEdit', JSON.stringify({logo: logo, banner: banner, theme: theme}));
+    applyTheme(theme);
+    document.getElementById('edit-logo-banner-modal').style.display = 'none';
+    // Limpar campos de arquivo
+    document.getElementById('edit-logo-file').value = '';
+    document.getElementById('edit-banner-file').value = '';
+    showToast('Logo e banner atualizados!');
+  }
+
+  // Cancelar logo/banner
+  document.getElementById('cancel-logo-banner').addEventListener('click', function() {
+    document.getElementById('edit-logo-banner-modal').style.display = 'none';
+  });
+
+  // Salvar produto
+  document.getElementById('save-product').addEventListener('click', function() {
+    var productId = document.getElementById('edit-product-id').value;
+    var imageInput = document.getElementById('edit-product-image');
+    var imageFile = document.getElementById('edit-product-image-file').files[0];
+    var imageUrl = imageInput.value;
+    
+    function saveProductWithImage(url) {
+      var updatedProduct = {
+        id: productId,
+        name: document.getElementById('edit-product-name').value,
+        description: document.getElementById('edit-product-desc').value,
+        price: parseFloat(document.getElementById('edit-product-price').value),
+        image_url: url || imageUrl,
+        category: document.getElementById('edit-product-category').value
+      };
+      
+      var index = currentProducts.findIndex(function(p) { return p.id == productId; });
+      if (index !== -1) {
+        currentProducts[index] = Object.assign({}, currentProducts[index], updatedProduct);
+        
+        var cards = document.querySelectorAll('.product-card');
+        var card = cards[index];
+        if (card) {
+          var nameEl = card.querySelector('.product-name');
+          var descEl = card.querySelector('.product-desc');
+          var priceEl = card.querySelector('.product-price');
+          var imgEl = card.querySelector('.product-img');
+          
+          if (nameEl) nameEl.textContent = updatedProduct.name;
+          if (descEl) descEl.textContent = updatedProduct.description;
+          if (priceEl) priceEl.textContent = 'R$ ' + updatedProduct.price.toFixed(2).replace('.', ',');
+          if (imgEl && updatedProduct.image_url) imgEl.src = updatedProduct.image_url;
+        }
+        
+        localStorage.setItem('productsEdit_' + currentRestaurant.id, JSON.stringify(currentProducts));
+        showToast('Produto atualizado!');
+      }
+      
+      document.getElementById('edit-product-modal').style.display = 'none';
+      document.getElementById('edit-product-image-file').value = '';
+    }
+    
+    if (imageFile) {
+      uploadImage(imageFile, function(url) {
+        if (url) imageUrl = url;
+        saveProductWithImage(imageUrl);
+      });
+    } else {
+      saveProductWithImage(null);
+    }
+  });
+
+  // Cancelar produto
+  document.getElementById('cancel-product').addEventListener('click', function() {
+    document.getElementById('edit-product-modal').style.display = 'none';
+  });
+
+  // Excluir produto
+  document.getElementById('delete-product').addEventListener('click', function() {
+    var productId = document.getElementById('edit-product-id').value;
+    if (confirm('Tem certeza que deseja excluir este produto?')) {
+      var index = currentProducts.findIndex(function(p) { return p.id == productId; });
+      if (index !== -1) {
+        currentProducts.splice(index, 1);
+        
+        // Remover card da tela
+        var cards = document.querySelectorAll('.product-card');
+        if (cards[index]) cards[index].remove();
+        
+        localStorage.setItem('productsEdit_' + currentRestaurant.id, JSON.stringify(currentProducts));
+        showToast('Produto excluído!');
+      }
+    }
+    document.getElementById('edit-product-modal').style.display = 'none';
+  });
+
+  // Configurar cliques para edição
+  function setupEditListeners() {
+    // Logo e Banner
+    var logoWrap = document.querySelector('.menu-logo-wrap');
+    var banner = document.querySelector('.menu-banner');
+    
+    if (logoWrap) {
+      logoWrap.addEventListener('click', function() {
+        if (editMode) openLogoBannerModal();
+      });
+    }
+    if (banner) {
+      banner.addEventListener('click', function() {
+        if (editMode) openLogoBannerModal();
+      });
+    }
+    
+    // Produtos
+    var cards = document.querySelectorAll('.product-card');
+    cards.forEach(function(card, index) {
+      card.addEventListener('click', function(e) {
+        if (editMode && e.target.className !== 'product-add-btn') {
+          var product = currentProducts[index];
+          if (product) openProductEditModal(product);
+        }
+      });
+    });
+  }
+
+  // Carregar dados salvos
+  function loadSavedData() {
+    var slug = new URLSearchParams(window.location.search).get('slug');
+    if (!slug) return;
+    
+    api.fetchRestaurantBySlug(slug).then(function(r) {
+      if (r && r.data) {
+        currentRestaurant = r.data;
+        
+        // Carregar logo/banner/tema salvos
+        var savedMenu = JSON.parse(localStorage.getItem('menuEdit') || '{}');
+        if (savedMenu.logo) {
+          var logoImg = document.querySelector('.menu-logo img');
+          if (logoImg) logoImg.src = savedMenu.logo;
+        }
+        if (savedMenu.banner) {
+          var bannerEl = document.querySelector('.menu-banner');
+          if (bannerEl) bannerEl.style.backgroundImage = 'url(' + savedMenu.banner + ')';
+        }
+        if (savedMenu.theme) {
+          applyTheme(savedMenu.theme);
+        }
+        
+        return api.fetchProducts(currentRestaurant.id);
+      }
+    }).then(function(r) {
+      if (r && r.data) {
+        var savedProducts = JSON.parse(localStorage.getItem('productsEdit_' + currentRestaurant.id) || 'null');
+        currentProducts = savedProducts || r.data;
+        
+        // Configurar listeners após renderização
+        setTimeout(setupEditListeners, 500);
+      }
+    });
+  }
+
+  // Iniciar
+  if (isOwnerLoggedIn()) {
+    createEditButton();
+    
+    // Esperar menu carregar
+    var checkInterval = setInterval(function() {
+      if (document.querySelector('.menu-content')) {
+        clearInterval(checkInterval);
+        loadSavedData();
+      }
+    }, 100);
+  }
+})();
+</script>
 </body>
 </html>
