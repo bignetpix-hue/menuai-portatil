@@ -482,6 +482,12 @@
     }
 
     var cleaned = phone.replace(/\D/g, '');
+    
+    // Garantir formato internacional para WhatsApp
+    if (cleaned.length <= 11 && !cleaned.startsWith('55')) {
+      cleaned = '55' + cleaned;
+    }
+    
     var lines = [];
     lines.push('*Pedido - ' + (restaurant.name || 'Restaurante') + '*');
     lines.push('');
