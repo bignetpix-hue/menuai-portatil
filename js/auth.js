@@ -51,10 +51,13 @@ function logout() {
 }
 
 function isAdmin(email) {
-  var admins = window.__CONFIG__.adminEmails || [];
-  if (admins.includes(email)) return Promise.resolve(true);
   if (!currentUser) return Promise.resolve(false);
-  return Promise.resolve(!!currentUser.is_admin);
+  if (currentUser.is_admin) return Promise.resolve(true);
+  return api.isAdmin().then(function (r) {
+    return r.is_admin;
+  }).catch(function () {
+    return false;
+  });
 }
 
 function loadRestaurant() {

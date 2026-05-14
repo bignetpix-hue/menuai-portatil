@@ -42,8 +42,12 @@ function handleRoute() {
   var viewId = '';
   if (hash.startsWith('#/admin/config')) viewId = 'view-admin-config';
   else if (hash.startsWith('#/admin/restaurant')) viewId = 'view-admin-restaurant';
+  else if (hash.startsWith('#/admin/staff')) viewId = 'view-admin-staff';
   else if (hash.startsWith('#/admin')) viewId = 'view-admin';
+  else if (hash.startsWith('#/reports')) viewId = 'view-reports';
   else if (hash.startsWith('#/config')) viewId = 'view-config';
+  else if (hash.startsWith('#/qrcode')) viewId = 'view-qrcode';
+  else if (hash.startsWith('#/orders')) viewId = 'view-orders';
   else if (hash.startsWith('#/products')) viewId = 'view-products';
   else viewId = 'view-dashboard';
   console.log('viewId:', viewId);
@@ -59,7 +63,7 @@ function handleRoute() {
   document.querySelectorAll('.nav-link[data-route]').forEach(function (l) { l.classList.remove('active'); });
   document.querySelectorAll('.sidebar-link[data-route]').forEach(function (l) { l.classList.remove('active'); });
 
-  var routeMap = { 'view-dashboard': 'dashboard', 'view-config': 'config', 'view-products': 'products', 'view-admin': 'admin', 'view-admin-config': 'admin-config', 'view-admin-restaurant': 'admin' };
+  var routeMap = { 'view-dashboard': 'dashboard', 'view-config': 'config', 'view-qrcode': 'qrcode', 'view-products': 'products', 'view-orders': 'orders', 'view-reports': 'reports', 'view-admin': 'admin', 'view-admin-config': 'admin-config', 'view-admin-staff': 'admin-staff', 'view-admin-restaurant': 'admin' };
   var activeRoute = routeMap[viewId];
   if (activeRoute) {
     var activeLink = document.querySelector('.nav-link[data-route="' + activeRoute + '"]');
@@ -76,9 +80,13 @@ function handleRoute() {
 
   if (viewId === 'view-dashboard') mountDashboard();
   else if (viewId === 'view-config') mountConfig();
+  else if (viewId === 'view-qrcode') mountQRCode();
   else if (viewId === 'view-products') mountProducts();
+  else if (viewId === 'view-orders') mountOrders();
+  else if (viewId === 'view-reports') mountReports();
   else if (viewId === 'view-admin') mountAdmin();
   else if (viewId === 'view-admin-config') mountAdminConfig();
+  else if (viewId === 'view-admin-staff') mountStaff();
   else if (viewId === 'view-admin-restaurant') mountAdminRestaurant();
 }
 
@@ -430,11 +438,28 @@ function setupProductActionButtons() {
       openModal('modal-delete-product');
     });
   });
-  document.getElementById('btn-confirm-delete-product') && document.getElementById('btn-confirm-delete-product').addEventListener('click', function () {
-    confirmDeleteProduct();
-  });
-  document.getElementById('btn-novo-produto') && document.getElementById('btn-novo-produto').addEventListener('click', function () {
-    openProductModal(null);
+}
+
+// Make confirmDeleteProduct safe against double-clicks
+var _deleting = false;
+function confirmDeleteProduct() {
+  if (_deleting) return;
+  if (adminEditingRestaurantId) return;
+  var id = document.getElementById('delete-product-id').value;
+  if (!id) return;
+  _deleting = true;
+  showLoading();
+  api.deleteProduct(id).then(function () {
+    showToast('Produto excluído!', 'success');
+    closeModal('modal-delete-product');
+    _deleting = false;
+    return loadProducts();
+  }).catch(function (e) {
+    showToast('Erro ao excluir: ' + e.message, 'error');
+    _deleting = false;
+  }).finally(function () {
+    hideLoading();
+    _deleting = false;
   });
 }
 
@@ -573,31 +598,36 @@ document.getElementById('prod-destaque').checked = !!product.is_highlight;
 }
 
 function duplicateProduct(product) {
-  console.log('Iniciando duplicação do produto:', product.name);
-  if (!currentRestaurant) {
+  console.log('Iniciando duplicação do produto:', product ? product.name : 'null');
+  if (!product || !product.name) {
+    showToast('Produto inválido para duplicação', 'error');
+    return;
+  }
+  if (!currentRestaurant || !currentRestaurant.id) {
     showToast('Restaurante não identificado', 'error');
     return;
   }
   var duplicated = {
     name: product.name + ' (cópia)',
     price: product.price,
-    category: product.category,
-    gourmet_name: product.gourmet_name || '',
-    description: product.description || '',
-    is_highlight: product.is_highlight || false,
-    is_promotion: false,
-    old_price: null,
-    image_url: product.image_url || ''
+    category: product.category || null,
+    gourmet_name: product.gourmet_name || null,
+    description: product.description || null,
+    is_highlight: product.is_highlight ? 1 : 0,
+    image_url: product.image_url || null
   };
-  console.log('Dados do produto duplicado:', duplicated);
+  console.log('Duplicando:', JSON.stringify(duplicated));
+  showLoading();
   api.createProduct(currentRestaurant.id, duplicated).then(function (r) {
-    console.log('Produto criado com sucesso, recarregando...');
+    console.log('Produto duplicado com sucesso:', r);
     showToast('Produto duplicado com sucesso!');
     loadProducts();
     fetchStats();
-  }).catch(function (e) {
-    console.error('Erro ao duplicar produto:', e);
-    showToast('Erro ao duplicar produto: ' + e.message, 'error');
+  }).catch(function (err) {
+    console.error('Erro ao duplicar produto:', err);
+    showToast('Erro ao duplicar: ' + (err.message || 'erro desconhecido'), 'error');
+  }).finally(function () {
+    hideLoading();
   });
 }
 
@@ -627,6 +657,8 @@ function saveProduct() {
     is_highlight: destaque,
     is_promotion: promocao,
     old_price: (promocao && precoAntigo && !isNaN(precoAntigo)) ? precoAntigo : null,
+    valid_from: document.getElementById('prod-valid-from') ? document.getElementById('prod-valid-from').value || null : null,
+    valid_until: document.getElementById('prod-valid-until') ? document.getElementById('prod-valid-until').value || null : null,
     is_active: true
   };
 
@@ -649,22 +681,6 @@ function saveProduct() {
     loadProducts();
   }).catch(function (e) {
     showToast('Erro ao salvar produto: ' + e.message, 'error');
-  }).finally(function () {
-    hideLoading();
-  });
-}
-
-function confirmDeleteProduct() {
-  if (adminEditingRestaurantId) return;
-  var id = document.getElementById('delete-product-id').value;
-  if (!id) return;
-  showLoading();
-  api.deleteProduct(id).then(function () {
-    showToast('Produto excluído!', 'success');
-    closeModal('modal-delete-product');
-    loadProducts();
-  }).catch(function (e) {
-    showToast('Erro ao excluir: ' + e.message, 'error');
   }).finally(function () {
     hideLoading();
   });
@@ -700,6 +716,11 @@ function fillConfigForm() {
   document.getElementById('config-telefone').value = rest.phone || '';
   document.getElementById('config-categoria').value = rest.category || '';
 
+  // White-label fields
+  if (document.getElementById('config-primary-color')) document.getElementById('config-primary-color').value = rest.primary_color || '#FF4500';
+  if (document.getElementById('config-secondary-color')) document.getElementById('config-secondary-color').value = rest.secondary_color || '#16A34A';
+  if (document.getElementById('config-font')) document.getElementById('config-font').value = rest.font_family || 'Instrument Sans';
+
   if (rest.logo_url) {
     var logoPreview = document.getElementById('config-logo-preview');
     logoPreview.src = rest.logo_url;
@@ -729,6 +750,8 @@ function fillConfigForm() {
     viewMenuBtn.href = menuUrl;
     viewMenuBtn.style.display = 'inline-flex';
   }
+
+  mountSchedules();
 }
 
 function saveConfig() {
@@ -749,15 +772,22 @@ function saveConfig() {
 
   var updateData = { name: nome, phone: telefone || null, category: categoria || null };
 
-  var logoPromise = logoInput.files[0]
-    ? api.uploadImage(logoInput.files[0]).then(function (url) { updateData.logo_url = url; })
-    : Promise.resolve();
+  // White-label
+  var pc = document.getElementById('config-primary-color');
+  var sc = document.getElementById('config-secondary-color');
+  var ff = document.getElementById('config-font');
+  if (pc) updateData.primary_color = pc.value;
+  if (sc) updateData.secondary_color = sc.value;
+  if (ff) updateData.font_family = ff.value;
 
-  var bannerPromise = bannerInput.files[0]
-    ? api.uploadImage(bannerInput.files[0]).then(function (url) { updateData.banner_url = url; })
-    : Promise.resolve();
+  function doUpload(input) {
+    if (!input || !input.files || !input.files[0]) return Promise.resolve(null);
+    return api.uploadImage(input.files[0]);
+  }
 
-  Promise.all([logoPromise, bannerPromise]).then(function () {
+  Promise.all([doUpload(logoInput), doUpload(bannerInput)]).then(function (urls) {
+    if (urls[0]) updateData.logo_url = urls[0];
+    if (urls[1]) updateData.banner_url = urls[1];
     return api.updateRestaurant(currentRestaurant.id, updateData);
   }).then(function (result) {
     showToast('Configurações salvas!', 'success');
@@ -766,11 +796,337 @@ function saveConfig() {
     currentRestaurant.name = nome;
     currentRestaurant.phone = telefone;
     currentRestaurant.category = categoria;
+    // Re-render config form with updated data
+    fillConfigForm();
   }).catch(function (e) {
     showToast('Erro ao salvar: ' + e.message, 'error');
   }).finally(function () {
     hideLoading();
   });
+}
+
+// ===== ORDERS PANEL =====
+var ordersEventSource = null;
+
+function mountOrders() {
+  if (!currentRestaurant) {
+    loadRestaurant().then(function() { renderOrders(); }).catch(renderOrders);
+  } else {
+    renderOrders();
+  }
+}
+
+function renderOrders() {
+  if (!currentRestaurant) { document.getElementById('orders-list').innerHTML = '<div class="empty-state">Carregando...</div>'; return; }
+  loadOrders();
+
+  // SSE for real-time
+  if (ordersEventSource) ordersEventSource.close();
+  try {
+    ordersEventSource = new EventSource(window.__CONFIG__.apiUrl + '/api/orders/' + currentRestaurant.id + '/sse');
+    ordersEventSource.onmessage = function (e) {
+      try {
+        var data = JSON.parse(e.data);
+        if (data.type === 'new_order') {
+          showToast('Novo pedido recebido!', 'success');
+          loadOrders();
+          updateOrdersBadge();
+        }
+      } catch (err) {}
+    };
+    ordersEventSource.onerror = function () { /* SSE connection lost - will auto-reconnect */ };
+  } catch (e) { console.warn('SSE not available:', e); }
+}
+
+function loadOrders() {
+  var status = document.getElementById('orders-filter-status');
+  var statusVal = status ? status.value : 'all';
+  var listEl = document.getElementById('orders-list');
+  listEl.innerHTML = '<div class="loading-cell">Carregando pedidos...</div>';
+
+  api.fetchOrders(currentRestaurant.id, statusVal === 'all' ? null : statusVal).then(function (result) {
+    var orders = result.data || [];
+    if (orders.length === 0) {
+      listEl.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📋</div><h3>Nenhum pedido</h3><p>Os pedidos feitos pelos clientes aparecerão aqui em tempo real.</p></div>';
+      return;
+    }
+    var html = '';
+    orders.forEach(function (order) {
+      var items = [];
+      try { items = JSON.parse(order.items || '[]'); } catch (e) {}
+      var statusClass = order.status === 'pending' ? 'badge-highlight' : order.status === 'preparing' ? 'badge-warning' : order.status === 'done' ? 'badge-success' : 'badge-category';
+      var statusLabel = order.status === 'pending' ? 'Pendente' : order.status === 'preparing' ? 'Preparando' : order.status === 'done' ? 'Pronto' : 'Entregue';
+      var mesaHtml = order.table_number ? 'Mesa ' + order.table_number : 'Sem mesa';
+      var obsHtml = order.observations ? '<div class="order-obs">📝 ' + escapeHtml(order.observations) + '</div>' : '';
+      var itemsHtml = items.map(function (item) {
+        return '<div class="order-item-line"><span>' + item.quantity + 'x ' + escapeHtml(item.name || '') + '</span><span>' + formatPrice(item.price * item.quantity) + '</span></div>';
+      }).join('');
+      html += '<div class="order-card" data-order-id="' + order.id + '">'
+        + '<div class="order-header">'
+        + '<span class="order-mesa">' + mesaHtml + '</span>'
+        + '<span class="order-time">' + formatDate(order.created_at) + '</span>'
+        + '<span class="badge ' + statusClass + '">' + statusLabel + '</span>'
+        + '</div>'
+        + obsHtml
+        + '<div class="order-items">' + itemsHtml + '</div>'
+        + '<div class="order-footer">'
+        + '<span class="order-total">Total: ' + formatPrice(order.total) + '</span>'
+        + '<div class="order-actions">'
+        + (order.status === 'pending' ? '<button class="btn btn-sm btn-primary" onclick="setOrderStatus(\'' + order.id + '\',\'preparing\')">Preparar</button>' : '')
+        + (order.status === 'preparing' ? '<button class="btn btn-sm btn-success" onclick="setOrderStatus(\'' + order.id + '\',\'done\')">Pronto</button>' : '')
+        + (order.status === 'done' ? '<button class="btn btn-sm btn-secondary" onclick="setOrderStatus(\'' + order.id + '\',\'delivered\')">Entregue</button>' : '')
+        + '</div>'
+        + '</div>'
+        + '</div>';
+    });
+    listEl.innerHTML = html;
+    updateOrdersBadge();
+  }).catch(function (e) {
+    listEl.innerHTML = '<div class="error-cell">Erro ao carregar pedidos: ' + e.message + '</div>';
+  });
+}
+
+function setOrderStatus(orderId, status) {
+  showLoading();
+  api.updateOrderStatus(orderId, status).then(function () {
+    showToast('Status atualizado!', 'success');
+    loadOrders();
+  }).catch(function (e) {
+    showToast('Erro: ' + e.message, 'error');
+  }).finally(function () {
+    hideLoading();
+  });
+}
+
+function updateOrdersBadge() {
+  if (!currentRestaurant) return;
+  api.fetchOrders(currentRestaurant.id, 'pending').then(function (result) {
+    var count = (result.data || []).length;
+    var badge = document.getElementById('orders-badge');
+    var label = document.getElementById('orders-sidebar-label');
+    if (badge) {
+      if (count > 0) { badge.textContent = count + ' pendente' + (count > 1 ? 's' : ''); badge.style.display = 'inline'; }
+      else badge.style.display = 'none';
+    }
+    if (label && count > 0) label.textContent = 'Pedidos (' + count + ')';
+    else if (label) label.textContent = 'Pedidos';
+  }).catch(function () {});
+}
+
+// ===== QR CODE PRINT =====
+function mountQRCode() {
+  if (!currentRestaurant) {
+    loadRestaurant().then(fillQRForm).catch(fillQRForm);
+  } else {
+    fillQRForm();
+  }
+}
+
+function fillQRForm() {
+  // nothing special needed
+}
+
+// ===== SCHEDULES (PERIOD AUTOMATION) =====
+function mountSchedules() {
+  if (!currentRestaurant) return;
+  var container = document.getElementById('schedules-list');
+  if (!container) return;
+  api.fetchSchedules(currentRestaurant.id).then(function (result) {
+    var schedules = result.data || [];
+    if (schedules.length === 0) {
+      container.innerHTML = '<div class="empty-state">Nenhum horário configurado. O cardápio fica visível o tempo todo.</div>';
+      return;
+    }
+    var html = '';
+    schedules.forEach(function (s) {
+      html += '<div class="schedule-item">'
+        + '<span class="schedule-period">' + escapeHtml(s.period) + '</span>'
+        + '<span class="schedule-time">' + s.start_time + ' às ' + s.end_time + '</span>'
+        + '<span class="schedule-cats">' + escapeHtml(s.categories || 'Todas as categorias') + '</span>'
+        + '<button class="btn btn-sm btn-danger" onclick="deleteSchedule(\'' + s.id + '\')">Excluir</button>'
+        + '</div>';
+    });
+    container.innerHTML = html;
+  }).catch(function () {});
+}
+
+function deleteSchedule(id) {
+  if (!confirm('Excluir este horário?')) return;
+  api.deleteSchedule(id).then(function () {
+    showToast('Horário excluído!', 'success');
+    mountSchedules();
+  }).catch(function (e) {
+    showToast('Erro: ' + e.message, 'error');
+  });
+}
+
+// ===== REPORTS =====
+function mountReports() {
+  if (!currentRestaurant) {
+    loadRestaurant().then(renderReports).catch(renderReports);
+    return;
+  }
+  renderReports();
+}
+
+function renderReports() {
+  if (!currentRestaurant) return;
+  var rid = currentRestaurant.id;
+  api.fetchReports(rid).then(function (result) {
+    var d = result.data || {};
+    document.getElementById('report-total-orders').textContent = d.total_orders || 0;
+    document.getElementById('report-revenue').textContent = formatPrice(d.total_revenue || 0);
+    var avg = d.total_orders > 0 ? (d.total_revenue / d.total_orders) : 0;
+    document.getElementById('report-avg-ticket').textContent = formatPrice(avg);
+    document.getElementById('btn-export-csv').href = api.exportOrdersCSV(rid);
+
+    // Orders by day chart
+    var daysEl = document.getElementById('report-chart-orders');
+    var days = d.orders_by_day || [];
+    if (days.length === 0) {
+      daysEl.innerHTML = '<div class="empty-state">Nenhum pedido ainda</div>';
+    } else {
+      var maxCount = Math.max.apply(null, days.map(function (d2) { return d2.count; })) || 1;
+      var html = '<div style="display:flex;align-items:end;gap:8px;height:180px;padding:0 16px;">';
+      days.slice(0, 14).reverse().forEach(function (day) {
+        var h = Math.max(4, (day.count / maxCount) * 160);
+        html += '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">'
+          + '<span style="font-size:11px;color:#EDE3D0;">' + day.count + '</span>'
+          + '<div style="width:100%;height:' + h + 'px;background:linear-gradient(180deg,#FF4500,#E03D00);border-radius:4px 4px 0 0;min-height:4px;"></div>'
+          + '<span style="font-size:9px;color:#7A6E62;transform:rotate(-45deg);white-space:nowrap;">' + (day.day || '').slice(5) + '</span>'
+          + '</div>';
+      });
+      html += '</div>';
+      daysEl.innerHTML = html;
+    }
+
+    // Top products
+    var topEl = document.getElementById('report-chart-top');
+    var top = d.top_products || [];
+    if (top.length === 0) {
+      topEl.innerHTML = '<div class="empty-state">Nenhum produto vendido</div>';
+    } else {
+      var maxQty = Math.max.apply(null, top.map(function (p) { return p.quantity; })) || 1;
+      var html2 = '<div style="display:flex;flex-direction:column;gap:8px;width:100%;">';
+      top.slice(0, 10).forEach(function (p) {
+        var w = Math.max(4, (p.quantity / maxQty) * 100);
+        html2 += '<div style="display:flex;align-items:center;gap:12px;">'
+          + '<span style="font-size:13px;color:#EDE3D0;min-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHtml(p.name) + '</span>'
+          + '<div style="flex:1;height:24px;background:#252018;border-radius:4px;overflow:hidden;">'
+          + '<div style="height:100%;width:' + w + '%;background:linear-gradient(90deg,#FF4500,#FF6B2C);border-radius:4px;display:flex;align-items:center;padding-left:8px;">'
+          + '<span style="font-size:11px;color:#fff;font-weight:600;">' + p.quantity + 'x</span></div></div>'
+          + '<span style="font-size:12px;color:#FF4500;min-width:70px;text-align:right;">' + formatPrice(p.revenue) + '</span>'
+          + '</div>';
+      });
+      html2 += '</div>';
+      topEl.innerHTML = html2;
+    }
+
+    // Status breakdown
+    var statusEl = document.getElementById('report-status-list');
+    var statuses = d.orders_by_status || [];
+    if (statuses.length === 0) {
+      statusEl.innerHTML = '<div class="empty-state">Nenhum pedido</div>';
+    } else {
+      var labels = { pending: 'Pendentes', preparing: 'Preparando', done: 'Pronto', delivered: 'Entregue', cancelled: 'Cancelado' };
+      var html3 = '<div style="display:flex;gap:16px;flex-wrap:wrap;">';
+      statuses.forEach(function (s) {
+        html3 += '<div style="flex:1;min-width:100px;text-align:center;padding:20px;background:#1A140C;border:1px solid #252018;border-radius:8px;">'
+          + '<div style="font-family:Syne,sans-serif;font-size:28px;font-weight:700;color:#FF4500;">' + s.count + '</div>'
+          + '<div style="font-size:12px;color:#7A6E62;margin-top:4px;">' + (labels[s.status] || s.status) + '</div>'
+          + '</div>';
+      });
+      html3 += '</div>';
+      statusEl.innerHTML = html3;
+    }
+  }).catch(function (e) {
+    showToast('Erro ao carregar relatórios: ' + e.message, 'error');
+  });
+}
+
+// ===== STAFF MANAGEMENT =====
+function mountStaff() {
+  isAdmin(currentUser.email).then(function (isAdm) {
+    if (!isAdm) { window.location.hash = '#/'; return; }
+    loadStaffTable();
+  });
+}
+
+function loadStaffTable() {
+  var tbody = document.getElementById('staff-tbody');
+  tbody.innerHTML = '<tr><td colspan="4" class="loading-cell">Carregando...</td></tr>';
+  api.fetchStaff().then(function (result) {
+    var staff = result.data || [];
+    if (staff.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="4" class="empty-cell">Nenhum membro da equipe</td></tr>';
+      return;
+    }
+    var labels = { owner: 'Proprietário', kitchen: 'Cozinha', waiter: 'Garçom' };
+    var html = staff.map(function (u) {
+      return '<tr><td>' + escapeHtml(u.name) + '</td><td>' + escapeHtml(u.email) + '</td><td>' + (labels[u.role] || u.role) + '</td><td>' + formatDate(u.created_at) + '</td></tr>';
+    }).join('');
+    tbody.innerHTML = html;
+  }).catch(function () {
+    tbody.innerHTML = '<tr><td colspan="4" class="error-cell">Erro ao carregar</td></tr>';
+  });
+}
+
+// ===== PUSH SUBSCRIPTION =====
+function subscribePush() {
+  if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+    return;
+  }
+  if (Notification.permission === 'denied') return;
+  if (Notification.permission === 'granted') {
+    doSubscribePush();
+    return;
+  }
+  Notification.requestPermission().then(function (perm) {
+    if (perm === 'granted') doSubscribePush();
+  });
+}
+
+function doSubscribePush() {
+  navigator.serviceWorker.ready.then(function (reg) {
+    reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: null }).then(function (sub) {
+      if (currentRestaurant) {
+        api.subscribePush({
+          restaurant_id: currentRestaurant.id,
+          endpoint: sub.endpoint,
+          keys: sub.toJSON().keys
+        }).catch(function () {});
+      }
+    }).catch(function () {});
+  }).catch(function () {});
+}
+
+// ===== IMAGE ZOOM ON MENU =====
+function setupImageZoom() {
+  document.querySelectorAll('.product-img').forEach(function (img) {
+    img.style.cursor = 'zoom-in';
+    img.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var overlay = document.createElement('div');
+      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:99999;display:flex;align-items:center;justify-content:center;cursor:zoom-out;';
+      overlay.addEventListener('click', function () { overlay.remove(); });
+      var fullImg = document.createElement('img');
+      fullImg.src = this.src;
+      fullImg.style.cssText = 'max-width:90vw;max-height:90vh;border-radius:8px;object-fit:contain;';
+      overlay.appendChild(fullImg);
+      document.body.appendChild(overlay);
+    });
+  });
+}
+
+// Extend product grid render setup to add zoom
+var origRenderProductGrid = typeof renderProductGrid === 'function' ? renderProductGrid : null;
+if (!origRenderProductGrid && typeof window !== 'undefined') {
+  // Hook into menu.js renderProductGrid using MutationObserver
+  var zoomObserver = new MutationObserver(function () {
+    setupImageZoom();
+  });
+  var menuRoot = document.getElementById('menu-root');
+  if (menuRoot) zoomObserver.observe(menuRoot, { childList: true, subtree: true });
 }
 
 // ===== ADMIN =====
@@ -1158,21 +1514,116 @@ function adminConfirmDeleteProduct(id, name) {
   document.getElementById('delete-product-id').value = id;
   document.getElementById('delete-product-name').textContent = name;
   openModal('modal-delete-product');
-  document.getElementById('btn-confirm-delete-product').onclick = function () {
-    var prodId = document.getElementById('delete-product-id').value;
-    if (!prodId) return;
-    showLoading();
-    api.deleteProduct(prodId).then(function () {
-      showToast('Produto excluído!', 'success');
-      closeModal('modal-delete-product');
-      loadAdminProducts(adminEditingRestaurantId);
-    }).catch(function (e) {
-      showToast('Erro ao excluir: ' + e.message, 'error');
-    }).finally(function () {
-      hideLoading();
-    });
-  };
+  // The confirm button listener handles both normal and admin flows
+  // via the adminEditingRestaurantId check inside handleConfirmDelete
 }
+
+function handleConfirmDelete() {
+  if (adminEditingRestaurantId) {
+    adminDoDeleteProduct();
+  } else {
+    confirmDeleteProduct();
+  }
+}
+
+function adminDoDeleteProduct() {
+  var prodId = document.getElementById('delete-product-id').value;
+  if (!prodId) return;
+  showLoading();
+  api.deleteProduct(prodId).then(function () {
+    showToast('Produto excluído!', 'success');
+    closeModal('modal-delete-product');
+    loadAdminProducts(adminEditingRestaurantId);
+  }).catch(function (e) {
+    showToast('Erro ao excluir: ' + e.message, 'error');
+  }).finally(function () {
+    hideLoading();
+  });
+}
+
+// ===== INLINE EDIT =====
+function setupInlineEdit() {
+  document.querySelectorAll('.product-info .product-name').forEach(function (el) {
+    el.addEventListener('dblclick', function () {
+      if (this.classList.contains('inline-editing')) return;
+      var currentText = this.textContent;
+      var input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'inline-edit-input';
+      input.value = currentText;
+      this.textContent = '';
+      this.appendChild(input);
+      this.classList.add('inline-editing');
+      input.focus();
+      input.select();
+      var self = this;
+      function save() {
+        var newVal = input.value.trim();
+        if (newVal && newVal !== currentText) {
+          var productItem = self.closest('.product-item');
+          if (productItem) {
+            var prodId = productItem.dataset.productId;
+            api.updateProduct(prodId, { name: newVal }).then(function () {
+              self.textContent = newVal;
+              showToast('Nome atualizado!', 'success');
+              loadProducts();
+            }).catch(function (e) {
+              self.textContent = currentText;
+              showToast('Erro ao atualizar: ' + e.message, 'error');
+            });
+          }
+        } else {
+          self.textContent = currentText;
+        }
+        self.classList.remove('inline-editing');
+      }
+      input.addEventListener('blur', save);
+      input.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+        if (e.key === 'Escape') { self.textContent = currentText; self.classList.remove('inline-editing'); }
+      });
+    });
+  });
+}
+
+// ===== ONBOARDING =====
+function showOnboarding() {
+  if (localStorage.getItem('menuai_onboarding_done')) return;
+  var overlay = document.createElement('div');
+  overlay.className = 'onboarding-overlay';
+  overlay.id = 'onboarding-overlay';
+  overlay.innerHTML =
+    '<div class="onboarding-card">' +
+    '<h2>Bem-vindo ao <span>MENU</span>AI</h2>' +
+    '<p>Em 3 passos seu cardápio digital está no ar</p>' +
+    '<div class="onboarding-steps">' +
+    '<div class="onboarding-step"><div class="onboarding-step-icon">1</div><div class="onboarding-step-text"><strong>Adicione produtos</strong> — Vá em "Produtos" e cadastre seus itens com fotos e preços</div></div>' +
+    '<div class="onboarding-step"><div class="onboarding-step-icon">2</div><div class="onboarding-step-text"><strong>Configure seu restaurante</strong> — Em "Configurações", coloque nome, logo e WhatsApp</div></div>' +
+    '<div class="onboarding-step"><div class="onboarding-step-icon">3</div><div class="onboarding-step-text"><strong>Compartilhe o QR Code</strong> — Imprima e cole nas mesas. Os pedidos chegam no seu WhatsApp!</div></div>' +
+    '</div>' +
+    '<button class="btn btn-primary btn-lg btn-block" onclick="closeOnboarding()">Começar!</button>' +
+    '</div>';
+  document.body.appendChild(overlay);
+}
+
+function closeOnboarding() {
+  var el = document.getElementById('onboarding-overlay');
+  if (el) el.remove();
+  localStorage.setItem('menuai_onboarding_done', 'true');
+}
+
+// Modify renderDashboard to trigger inline edit setup and onboarding
+var origRenderFiltered = renderFilteredProducts;
+renderFilteredProducts = function (products) {
+  origRenderFiltered(products);
+  setTimeout(setupInlineEdit, 100);
+};
+
+var origMountDashboard = mountDashboard;
+mountDashboard = function () {
+  origMountDashboard();
+  setTimeout(showOnboarding, 1000);
+};
 
 // ===== SETUP =====
 document.addEventListener('DOMContentLoaded', function () {
@@ -1207,6 +1658,28 @@ document.addEventListener('DOMContentLoaded', function () {
     e.preventDefault();
     saveConfig();
   });
+
+  // Preview logo antes do upload
+  function addFilePreview(inputId, previewId) {
+    var input = document.getElementById(inputId);
+    if (!input) return;
+    input.addEventListener('change', function () {
+      var file = this.files[0];
+      if (file) {
+        var reader = new FileReader();
+        reader.onload = function (e) {
+          var preview = document.getElementById(previewId);
+          if (preview) {
+            preview.src = e.target.result;
+            preview.style.display = 'block';
+          }
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+  }
+  addFilePreview('config-logo', 'config-logo-preview');
+  addFilePreview('config-banner', 'config-banner-preview');
 
   document.getElementById('btn-download-qrcode') && document.getElementById('btn-download-qrcode').addEventListener('click', function () {
     var canvas = document.querySelector('#qrcode-container canvas');
@@ -1270,6 +1743,13 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   });
 
+  // Confirm delete product (bound once — for both normal and admin flows)
+  var confirmBtn = document.getElementById('btn-confirm-delete-product');
+  if (confirmBtn && !confirmBtn.dataset.bound) {
+    confirmBtn.dataset.bound = '1';
+    confirmBtn.addEventListener('click', handleConfirmDelete);
+  }
+
   document.getElementById('prod-search') && document.getElementById('prod-search').addEventListener('input', function () {
     currentPage = 1;
     applyFilters();
@@ -1308,5 +1788,102 @@ document.addEventListener('DOMContentLoaded', function () {
     btnNovoRest.addEventListener('click', function () {
       openModal('modal-admin-restaurant');
     });
+  }
+
+  // Orders filter
+  document.getElementById('orders-filter-status') && document.getElementById('orders-filter-status').addEventListener('change', function () {
+    loadOrders();
+  });
+  document.getElementById('orders-refresh') && document.getElementById('orders-refresh').addEventListener('click', function () {
+    loadOrders();
+  });
+
+  // QR Code generator
+  document.getElementById('btn-gerar-qr-mesas') && document.getElementById('btn-gerar-qr-mesas').addEventListener('click', function () {
+    var inicio = parseInt(document.getElementById('qr-mesa-inicio').value) || 1;
+    var fim = parseInt(document.getElementById('qr-mesa-fim').value) || 10;
+    if (inicio > fim) { showToast('Mesa inicial deve ser menor que final', 'warning'); return; }
+    if (!currentRestaurant || !currentRestaurant.slug) { showToast('Restaurante não configurado', 'error'); return; }
+    var container = document.getElementById('qr-mesas-container');
+    container.innerHTML = '';
+    container.style.display = 'flex';
+    var baseUrl = window.location.origin + '/menu.html?slug=' + currentRestaurant.slug;
+    for (var m = inicio; m <= fim; m++) {
+      (function (mesa) {
+        var wrap = document.createElement('div');
+        wrap.style.cssText = 'text-align:center;background:#fff;padding:16px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);width:180px;';
+        var label = document.createElement('div');
+        label.style.cssText = 'font-family:Syne,sans-serif;font-size:14px;font-weight:700;color:#111;margin-bottom:8px;';
+        label.textContent = 'Mesa ' + mesa;
+        wrap.appendChild(label);
+        var qrDiv = document.createElement('div');
+        wrap.appendChild(qrDiv);
+        container.appendChild(wrap);
+        setTimeout(function () {
+          new QRCode(qrDiv, {
+            text: baseUrl + '&mesa=' + mesa,
+            width: 150,
+            height: 150,
+            colorDark: '#000000',
+            colorLight: '#ffffff',
+            correctLevel: QRCode.CorrectLevel.H
+          });
+        }, 50 * mesa);
+      })(m);
+    }
+    showToast((fim - inicio + 1) + ' QR Codes gerados!', 'success');
+  });
+
+  // Periodic badge update for orders
+  setInterval(function () {
+    if (window.location.hash === '#/orders' || window.location.hash === '#/') {
+      updateOrdersBadge();
+    }
+  }, 15000);
+
+  // Schedule
+  document.getElementById('btn-add-schedule') && document.getElementById('btn-add-schedule').addEventListener('click', function () {
+    if (!currentRestaurant) { showToast('Restaurante não carregado', 'error'); return; }
+    var period = document.getElementById('schedule-period').value;
+    var start = document.getElementById('schedule-start').value;
+    var end = document.getElementById('schedule-end').value;
+    var cats = document.getElementById('schedule-cats').value.trim();
+    if (!period || !start || !end) { showToast('Preencha período, início e fim', 'warning'); return; }
+    showLoading();
+    api.createSchedule(currentRestaurant.id, { period: period, start_time: start, end_time: end, categories: cats }).then(function () {
+      showToast('Horário adicionado!', 'success');
+      document.getElementById('schedule-cats').value = '';
+      mountSchedules();
+    }).catch(function (e) {
+      showToast('Erro: ' + e.message, 'error');
+    }).finally(function () {
+      hideLoading();
+    });
+  });
+
+  // Staff creation modal
+  document.getElementById('btn-add-staff') && document.getElementById('btn-add-staff').addEventListener('click', function () {
+    var email = prompt('Email do novo membro:');
+    if (!email) return;
+    var name = prompt('Nome:');
+    if (!name) return;
+    var role = prompt('Função (kitchen = cozinha, waiter = garçom):');
+    if (!role || ['kitchen', 'waiter'].indexOf(role) === -1) { showToast('Use kitchen ou waiter', 'warning'); return; }
+    var password = prompt('Senha temporária (mín. 6 caracteres):');
+    if (!password || password.length < 6) { showToast('Senha deve ter 6+ caracteres', 'warning'); return; }
+    showLoading();
+    api.registerStaff({ email: email, name: name, role: role, password: password }).then(function () {
+      showToast('Membro criado!', 'success');
+      loadStaffTable();
+    }).catch(function (e) {
+      showToast('Erro: ' + e.message, 'error');
+    }).finally(function () {
+      hideLoading();
+    });
+  });
+
+  // Push notification subscription (trigger after login)
+  if ('Notification' in window && 'serviceWorker' in navigator) {
+    setTimeout(subscribePush, 5000);
   }
 });

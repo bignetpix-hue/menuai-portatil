@@ -1,0 +1,15 @@
+{
+  "name": "MENUAI - Cardápio Digital",
+  "short_name": "MENUAI",
+  "description": "Cardápio digital para restaurantes com pedidos via WhatsApp",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0C0A07",
+  "theme_color": "#FF4500",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "/data/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/data/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ],
+  "categories": ["food", "restaurant", "business"]
+}

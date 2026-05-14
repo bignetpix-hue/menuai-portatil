@@ -53,10 +53,32 @@ function sqlOne(sql, params) {
   return rows.length > 0 ? rows[0] : null;
 }
 
+var saveTimeout = null;
 function saveDb() {
-  const data = db.export();
-  fs.writeFileSync(DB_PATH, Buffer.from(data));
+  if (saveTimeout) clearTimeout(saveTimeout);
+  saveTimeout = setTimeout(function () {
+    try {
+      const data = db.export();
+      fs.writeFileSync(DB_PATH, Buffer.from(data));
+    } catch (e) {
+      console.error('saveDb error:', e);
+    }
+  }, 500);
 }
+
+function flushDb() {
+  if (saveTimeout) clearTimeout(saveTimeout);
+  try {
+    const data = db.export();
+    fs.writeFileSync(DB_PATH, Buffer.from(data));
+  } catch (e) {
+    console.error('flushDb error:', e);
+  }
+}
+
+process.on('exit', function () { if (db) flushDb(); });
+process.on('SIGINT', function () { if (db) flushDb(); process.exit(0); });
+process.on('SIGTERM', function () { if (db) flushDb(); process.exit(0); });
 
 // --- Auth middleware ---
 function auth(req, res, next) {
@@ -157,6 +179,10 @@ app.get('/api/auth/me', auth, function (req, res) {
   res.json({ user: { ...user, is_admin: !!user.is_admin } });
 });
 
+app.get('/api/auth/is-admin', auth, function (req, res) {
+  res.json({ is_admin: !!req.user.is_admin });
+});
+
 // ===================== RESTAURANTS =====================
 
 app.get('/api/restaurants', auth, adminOnly, function (req, res) {
@@ -196,7 +222,7 @@ app.put('/api/restaurants/:id', auth, function (req, res) {
     return res.status(403).json({ error: 'Sem permissão' });
   }
 
-  const allowed = ['name', 'phone', 'whatsapp', 'category', 'plan', 'is_active', 'slug', 'logo_url', 'banner_url', 'email'];
+  const allowed = ['name', 'phone', 'whatsapp', 'category', 'plan', 'is_active', 'slug', 'logo_url', 'banner_url', 'email', 'primary_color', 'secondary_color', 'font_family', 'custom_domain', 'white_label'];
   const updates = {};
   for (const key of allowed) {
     if (req.body[key] !== undefined) updates[key] = req.body[key];
@@ -395,6 +421,246 @@ app.put('/api/admin/settings', auth, adminOnly, function (req, res) {
   res.json({ data: settings });
 });
 
+// ===================== ORDERS =====================
+
+var sseClients = [];
+
+app.get('/api/orders/:restaurantId/sse', function (req, res) {
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive',
+    'Access-Control-Allow-Origin': '*'
+  });
+  res.write('data: {"connected":true}\n\n');
+  var clientId = uuidv4();
+  sseClients.push({ id: clientId, res: res, restaurantId: req.params.restaurantId });
+  req.on('close', function () {
+    sseClients = sseClients.filter(function (c) { return c.id !== clientId; });
+  });
+});
+
+function broadcastOrder(restaurantId, order) {
+  sseClients.forEach(function (client) {
+    if (client.restaurantId === restaurantId) {
+      try { client.res.write('data: ' + JSON.stringify({ type: 'new_order', order: order }) + '\n\n'); } catch (e) {}
+    }
+  });
+}
+
+app.post('/api/orders', function (req, res) {
+  try {
+    const { restaurant_id, table, observations, items, total } = req.body;
+    if (!restaurant_id || !items || !items.length) {
+      return res.status(400).json({ error: 'restaurant_id e items são obrigatórios' });
+    }
+    const id = uuidv4();
+    sqlRun('INSERT INTO orders (id, restaurant_id, table_number, observations, items, total, status) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [id, restaurant_id, table || '', observations || '', JSON.stringify(items), total || 0, 'pending']);
+    const order = sqlOne('SELECT * FROM orders WHERE id = ?', [id]);
+    broadcastOrder(restaurant_id, order);
+    res.json({ data: order });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/api/orders/:restaurantId', auth, function (req, res) {
+  const { status } = req.query;
+  var where = 'WHERE restaurant_id = ?';
+  var params = [req.params.restaurantId];
+  if (status) {
+    where += ' AND status = ?';
+    params.push(status);
+  }
+  const orders = sqlAll('SELECT * FROM orders ' + where + ' ORDER BY created_at DESC', params);
+  res.json({ data: orders });
+});
+
+app.put('/api/orders/:id/status', auth, function (req, res) {
+  const { status } = req.body;
+  if (!status) return res.status(400).json({ error: 'status é obrigatório' });
+  sqlRun('UPDATE orders SET status = ?, updated_at = datetime(\'now\') WHERE id = ?', [status, req.params.id]);
+  const order = sqlOne('SELECT * FROM orders WHERE id = ?', [req.params.id]);
+  if (!order) return res.status(404).json({ error: 'Pedido não encontrado' });
+  res.json({ data: order });
+});
+
+app.get('/api/orders/:restaurantId/pending-count', auth, function (req, res) {
+  const result = sqlOne('SELECT COUNT(*) as count FROM orders WHERE restaurant_id = ? AND status = \'pending\'', [req.params.restaurantId]);
+  res.json({ count: result.count });
+});
+
+// ===================== SCHEDULES =====================
+
+app.get('/api/schedules/:restaurantId', function (req, res) {
+  const schedules = sqlAll('SELECT * FROM restaurant_schedules WHERE restaurant_id = ? ORDER BY start_time ASC', [req.params.restaurantId]);
+  res.json({ data: schedules });
+});
+
+app.post('/api/schedules/:restaurantId', auth, function (req, res) {
+  const { period, start_time, end_time, categories } = req.body;
+  if (!period || !start_time || !end_time) {
+    return res.status(400).json({ error: 'period, start_time e end_time são obrigatórios' });
+  }
+  const id = uuidv4();
+  sqlRun('INSERT INTO restaurant_schedules (id, restaurant_id, period, start_time, end_time, categories) VALUES (?, ?, ?, ?, ?, ?)',
+    [id, req.params.restaurantId, period, start_time, end_time, categories || '']);
+  const schedule = sqlOne('SELECT * FROM restaurant_schedules WHERE id = ?', [id]);
+  res.json({ data: schedule });
+});
+
+app.delete('/api/schedules/:id', auth, function (req, res) {
+  sqlRun('DELETE FROM restaurant_schedules WHERE id = ?', [req.params.id]);
+  res.json({ success: true });
+});
+
+// ===================== SSE FOR REAL-TIME ORDERS =====================
+
+var sseClients = [];
+
+app.get('/api/orders/:restaurantId/sse', function (req, res) {
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive',
+    'Access-Control-Allow-Origin': '*'
+  });
+  res.write('data: {"connected":true}\n\n');
+  var clientId = uuidv4();
+  var client = { id: clientId, res: res, restaurantId: req.params.restaurantId };
+  sseClients.push(client);
+  req.on('close', function () {
+    sseClients = sseClients.filter(function (c) { return c.id !== clientId; });
+  });
+});
+
+function broadcastOrder(restaurantId, order) {
+  sseClients.forEach(function (client) {
+    if (client.restaurantId === restaurantId) {
+      try { client.res.write('data: ' + JSON.stringify({ type: 'new_order', order: order }) + '\n\n'); } catch (e) {}
+    }
+  });
+}
+
+// ===================== PUSH NOTIFICATIONS =====================
+
+app.post('/api/push/subscribe', function (req, res) {
+  try {
+    const { restaurant_id, endpoint, keys } = req.body;
+    if (!restaurant_id || !endpoint) return res.status(400).json({ error: 'restaurant_id e endpoint obrigatórios' });
+    // Remove old subscription for this endpoint
+    sqlRun('DELETE FROM push_subscriptions WHERE endpoint = ?', [endpoint]);
+    sqlRun('INSERT INTO push_subscriptions (id, restaurant_id, endpoint, keys) VALUES (?, ?, ?, ?)',
+      [uuidv4(), restaurant_id, endpoint, JSON.stringify(keys || {})]);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/api/push/subscriptions/:restaurantId', auth, function (req, res) {
+  const subs = sqlAll('SELECT * FROM push_subscriptions WHERE restaurant_id = ?', [req.params.restaurantId]);
+  res.json({ data: subs });
+});
+
+// ===================== REPORTS =====================
+
+app.get('/api/reports/:restaurantId', auth, function (req, res) {
+  var rid = req.params.restaurantId;
+  var { start_date, end_date } = req.query;
+  var dateFilter = '';
+  var params = [rid];
+  if (start_date) { dateFilter += ' AND created_at >= ?'; params.push(start_date); }
+  if (end_date) { dateFilter += ' AND created_at <= ?'; params.push(end_date); }
+
+  // Total orders
+  var totalOrders = sqlOne('SELECT COUNT(*) as count FROM orders WHERE restaurant_id = ?' + dateFilter, params);
+  // Orders by status
+  var ordersByStatus = sqlAll('SELECT status, COUNT(*) as count FROM orders WHERE restaurant_id = ?' + dateFilter + ' GROUP BY status', params);
+  // Total revenue
+  var revenue = sqlOne('SELECT COALESCE(SUM(total), 0) as total FROM orders WHERE restaurant_id = ? AND status != \'cancelled\'' + dateFilter, params);
+  // Orders by day (last 7 days)
+  var ordersByDay = sqlAll('SELECT DATE(created_at) as day, COUNT(*) as count, COALESCE(SUM(total), 0) as revenue FROM orders WHERE restaurant_id = ?' + dateFilter + ' GROUP BY DATE(created_at) ORDER BY day DESC LIMIT 30', params);
+  // Top products
+  var allOrders = sqlAll('SELECT items FROM orders WHERE restaurant_id = ?' + dateFilter, params);
+  var productCount = {};
+  allOrders.forEach(function (row) {
+    try {
+      var items = JSON.parse(row.items || '[]');
+      items.forEach(function (item) {
+        var key = item.product_id || item.name || 'unknown';
+        productCount[key] = productCount[key] || { name: item.name || 'Produto', quantity: 0, revenue: 0 };
+        productCount[key].quantity += item.quantity || 0;
+        productCount[key].revenue += (item.price || 0) * (item.quantity || 0);
+      });
+    } catch (e) {}
+  });
+  var topProducts = Object.keys(productCount).map(function (key) {
+    return { id: key, name: productCount[key].name, quantity: productCount[key].quantity, revenue: productCount[key].revenue };
+  }).sort(function (a, b) { return b.quantity - a.quantity; }).slice(0, 20);
+
+  // Export CSV
+  if (req.query.format === 'csv') {
+    var csv = 'Data,Produto,Quantidade,Preço Unitário,Total,Mesa,Status\n';
+    allOrders.forEach(function (row) {
+      try {
+        var items = JSON.parse(row.items || '[]');
+        items.forEach(function (item) {
+          csv += (row.created_at || '') + ',' + (item.name || '') + ',' + (item.quantity || 0) + ','
+            + (item.price || 0) + ',' + ((item.price || 0) * (item.quantity || 0)) + ','
+            + (row.table_number || '') + ',' + (row.status || '') + '\n';
+        });
+      } catch (e) {}
+    });
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename=relatorio-pedidos.csv');
+    return res.send(csv);
+  }
+
+  res.json({
+    data: {
+      total_orders: totalOrders ? totalOrders.count : 0,
+      orders_by_status: ordersByStatus,
+      total_revenue: revenue ? revenue.total : 0,
+      orders_by_day: ordersByDay,
+      top_products: topProducts
+    }
+  });
+});
+
+// ===================== MULTI-USER =====================
+
+app.post('/api/auth/register-staff', auth, function (req, res) {
+  try {
+    const { email, password, name, role } = req.body;
+    if (!email || !password || !name || !role) {
+      return res.status(400).json({ error: 'Email, senha, nome e role são obrigatórios' });
+    }
+    if (['owner', 'kitchen', 'waiter'].indexOf(role) === -1) {
+      return res.status(400).json({ error: 'Role inválida. Use: owner, kitchen, waiter' });
+    }
+    if (!req.user.is_admin) return res.status(403).json({ error: 'Apenas admin pode criar usuários' });
+
+    const existing = sqlOne('SELECT id FROM users WHERE email = ?', [email]);
+    if (existing) return res.status(400).json({ error: 'Email já cadastrado' });
+
+    const userId = uuidv4();
+    const hash = bcrypt.hashSync(password, 10);
+    sqlRun('INSERT INTO users (id, email, name, password_hash, role, is_admin) VALUES (?, ?, ?, ?, ?, ?)',
+      [userId, email, name, hash, role, 0]);
+    res.json({ user: { id: userId, email, name, role } });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/api/auth/staff', auth, function (req, res) {
+  if (!req.user.is_admin) return res.status(403).json({ error: 'Apenas admin' });
+  const staff = sqlAll('SELECT id, email, name, role, created_at FROM users WHERE role != \'owner\' OR is_admin = 1 ORDER BY created_at DESC');
+  res.json({ data: staff });
+});
+
 // ===================== AI =====================
 
 app.post('/api/ai/description', auth, async function (req, res) {
@@ -415,7 +681,7 @@ app.post('/api/ai/description', auth, async function (req, res) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + openrouterKey,
+        'Authorization': 'Bearer ' + OPENROUTER_KEY,
         'HTTP-Referer': req.headers.origin || 'http://localhost:3000',
         'X-Title': 'MENUAI'
       },
@@ -449,7 +715,17 @@ app.post('/api/upload', auth, upload.single('file'), function (req, res) {
 
 // ===================== STATIC FILES =====================
 
-app.use(express.static(path.join(__dirname, '..'), { index: ['index.html', 'app.html'] }));
+// Security: block access to sensitive directories
+var rootDir = path.join(__dirname, '..');
+var blockedPaths = ['/node_modules', '/server', '/data', '/.env', '/package.json', '/package-lock.json', '/start.bat', '/check_db.js'];
+app.use(function (req, res, next) {
+  if (blockedPaths.some(function (p) { return req.path === p || req.path.startsWith(p + '/') || req.path.startsWith(p + '\\'); })) {
+    return res.status(404).json({ error: 'Not found' });
+  }
+  next();
+});
+
+app.use(express.static(rootDir, { index: ['index.html', 'app.html'], dotfiles: 'deny' }));
 
 app.get('*', function (req, res) {
   if (req.path.startsWith('/api/') || req.path.startsWith('/uploads/')) {
@@ -477,6 +753,23 @@ async function start() {
   db.run('CREATE TABLE IF NOT EXISTS products (id TEXT PRIMARY KEY, restaurant_id TEXT REFERENCES restaurants(id) ON DELETE CASCADE, name TEXT NOT NULL, price REAL NOT NULL, category TEXT, gourmet_name TEXT, description TEXT, image_url TEXT, is_highlight INTEGER DEFAULT 0, is_active INTEGER DEFAULT 1, sort_order INTEGER DEFAULT 0, created_at TEXT DEFAULT (datetime(\'now\')), updated_at TEXT DEFAULT (datetime(\'now\')))');
   db.run('CREATE TABLE IF NOT EXISTS analytics_events (id TEXT PRIMARY KEY, restaurant_id TEXT REFERENCES restaurants(id) ON DELETE CASCADE, event_type TEXT NOT NULL, metadata TEXT DEFAULT \'{}\', created_at TEXT DEFAULT (datetime(\'now\')))');
   db.run('CREATE TABLE IF NOT EXISTS admin_settings (id TEXT PRIMARY KEY, phone TEXT, whatsapp TEXT, email TEXT, business_hours TEXT, created_at TEXT DEFAULT (datetime(\'now\')), updated_at TEXT DEFAULT (datetime(\'now\')))');
+  db.run('CREATE TABLE IF NOT EXISTS orders (id TEXT PRIMARY KEY, restaurant_id TEXT REFERENCES restaurants(id) ON DELETE CASCADE, table_number TEXT, observations TEXT, items TEXT, total REAL DEFAULT 0, status TEXT DEFAULT \'pending\', created_at TEXT DEFAULT (datetime(\'now\')), updated_at TEXT DEFAULT (datetime(\'now\')))');
+  db.run('CREATE TABLE IF NOT EXISTS restaurant_schedules (id TEXT PRIMARY KEY, restaurant_id TEXT REFERENCES restaurants(id) ON DELETE CASCADE, period TEXT NOT NULL, start_time TEXT NOT NULL, end_time TEXT NOT NULL, categories TEXT, created_at TEXT DEFAULT (datetime(\'now\')))');
+
+  // Migration: add new columns (safe to run multiple times)
+  try { db.run('ALTER TABLE users ADD COLUMN role TEXT DEFAULT \'owner\''); } catch (e) {}
+  try { db.run('ALTER TABLE products ADD COLUMN valid_from TEXT'); } catch (e) {}
+  try { db.run('ALTER TABLE products ADD COLUMN valid_until TEXT'); } catch (e) {}
+  try { db.run('ALTER TABLE products ADD COLUMN discount_percent INTEGER DEFAULT 0'); } catch (e) {}
+  try { db.run('ALTER TABLE products ADD COLUMN is_promotion INTEGER DEFAULT 0'); } catch (e) {}
+  try { db.run('ALTER TABLE products ADD COLUMN old_price REAL'); } catch (e) {}
+  try { db.run('ALTER TABLE restaurants ADD COLUMN primary_color TEXT DEFAULT \'#FF4500\''); } catch (e) {}
+  try { db.run('ALTER TABLE restaurants ADD COLUMN secondary_color TEXT DEFAULT \'#16A34A\''); } catch (e) {}
+  try { db.run('ALTER TABLE restaurants ADD COLUMN font_family TEXT DEFAULT \'Instrument Sans\''); } catch (e) {}
+  try { db.run('ALTER TABLE restaurants ADD COLUMN custom_domain TEXT'); } catch (e) {}
+  try { db.run('ALTER TABLE restaurants ADD COLUMN white_label INTEGER DEFAULT 0'); } catch (e) {}
+  try { db.run('ALTER TABLE orders ADD COLUMN served_by TEXT'); } catch (e) {}
+  db.run('CREATE TABLE IF NOT EXISTS push_subscriptions (id TEXT PRIMARY KEY, restaurant_id TEXT REFERENCES restaurants(id) ON DELETE CASCADE, endpoint TEXT NOT NULL, keys TEXT, created_at TEXT DEFAULT (datetime(\'now\')))');
 
   var settingsCheck = sqlOne('SELECT id FROM admin_settings LIMIT 1');
   if (!settingsCheck) {

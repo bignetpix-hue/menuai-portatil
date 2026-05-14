@@ -32,6 +32,10 @@ function apiCall(method, path, body, retries) {
   });
 }
 
+api.isAdmin = function () {
+  return apiCall('GET', '/api/auth/is-admin');
+};
+
 // --- Auth ---
 api.login = function (email, password) {
   return apiCall('POST', '/api/auth/login', { email: email, password: password }).then(function (r) {
@@ -165,6 +169,56 @@ api.uploadImage = function (file) {
     xhr.onerror = function () { reject(new Error('Erro de rede no upload')); };
     xhr.send(formData);
   });
+};
+
+// --- Orders ---
+api.saveOrder = function (data) {
+  return apiCall('POST', '/api/orders', data);
+};
+
+api.fetchOrders = function (restaurantId, status) {
+  var qs = status ? '?status=' + encodeURIComponent(status) : '';
+  return apiCall('GET', '/api/orders/' + encodeURIComponent(restaurantId) + qs);
+};
+
+api.updateOrderStatus = function (orderId, status) {
+  return apiCall('PUT', '/api/orders/' + encodeURIComponent(orderId) + '/status', { status: status });
+};
+
+api.fetchSchedules = function (restaurantId) {
+  return apiCall('GET', '/api/schedules/' + encodeURIComponent(restaurantId));
+};
+
+api.createSchedule = function (restaurantId, data) {
+  return apiCall('POST', '/api/schedules/' + encodeURIComponent(restaurantId), data);
+};
+
+api.deleteSchedule = function (id) {
+  return apiCall('DELETE', '/api/schedules/' + encodeURIComponent(id));
+};
+
+// --- Push ---
+api.subscribePush = function (data) {
+  return apiCall('POST', '/api/push/subscribe', data);
+};
+
+// --- Reports ---
+api.fetchReports = function (restaurantId, params) {
+  var qs = params ? '?' + Object.keys(params).map(function (k) { return k + '=' + encodeURIComponent(params[k]); }).join('&') : '';
+  return apiCall('GET', '/api/reports/' + encodeURIComponent(restaurantId) + qs);
+};
+
+api.exportOrdersCSV = function (restaurantId) {
+  return window.__CONFIG__.apiUrl + '/api/reports/' + restaurantId + '?format=csv&t=' + Date.now();
+};
+
+// --- Staff ---
+api.registerStaff = function (data) {
+  return apiCall('POST', '/api/auth/register-staff', data);
+};
+
+api.fetchStaff = function () {
+  return apiCall('GET', '/api/auth/staff');
 };
 
 // --- AI ---

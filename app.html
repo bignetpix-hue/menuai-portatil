@@ -6,8 +6,12 @@
   <title>MENUAI - Dashboard</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/estilo.css">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#FF4500">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="stylesheet" href="css/estilo.css">
 </head>
 <body>
   <div class="app-shell">
@@ -40,6 +44,17 @@
             </span>
             <span>Configurações</span>
           </a>
+          <a href="#/qrcode" class="sidebar-link" data-route="qrcode">
+            <span class="sidebar-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="7" height="7"/>
+                <rect x="14" y="3" width="7" height="7"/>
+                <rect x="14" y="14" width="7" height="7"/>
+                <rect x="3" y="14" width="7" height="7"/>
+              </svg>
+            </span>
+            <span>QR Code</span>
+          </a>
           <a href="#/products" class="sidebar-link" data-route="products">
             <span class="sidebar-icon">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -49,6 +64,25 @@
               </svg>
             </span>
             <span>Produtos</span>
+          </a>
+          <a href="#/orders" class="sidebar-link" data-route="orders">
+            <span class="sidebar-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="16" y1="13" x2="8" y2="13"/>
+                <line x1="16" y1="17" x2="8" y2="17"/>
+              </svg>
+            </span>
+            <span id="orders-sidebar-label">Pedidos</span>
+          </a>
+          <a href="#/reports" class="sidebar-link" data-route="reports">
+            <span class="sidebar-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
+              </svg>
+            </span>
+            <span>Relatórios</span>
           </a>
         </div>
         <div class="sidebar-section admin-only" style="display:none" id="admin-sidebar-section">
@@ -70,6 +104,14 @@
               </svg>
             </span>
             <span>Admin</span>
+          </a>
+          <a href="#/admin/staff" class="sidebar-link" data-route="admin-staff">
+            <span class="sidebar-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+              </svg>
+            </span>
+            <span>Equipe</span>
           </a>
         </div>
       </nav>
@@ -212,7 +254,82 @@
         <div class="pagination" id="prod-pagination"></div>
       </section>
 
-      <!-- Config View -->
+      <!-- Orders View -->
+      <section class="view-section" id="view-orders" style="display:none">
+        <div class="view-header">
+          <h1>Pedidos <span id="orders-badge" class="badge badge-highlight" style="display:none;font-size:12px;vertical-align:middle;margin-left:8px;"></span></h1>
+          <div class="view-header-actions">
+            <select class="filter-select" id="orders-filter-status">
+              <option value="all">Todos</option>
+              <option value="pending" selected>Pendentes</option>
+              <option value="preparing">Preparando</option>
+              <option value="done">Pronto</option>
+              <option value="delivered">Entregue</option>
+            </select>
+            <button class="btn btn-secondary" id="orders-refresh">Atualizar</button>
+          </div>
+        </div>
+        <div class="orders-list" id="orders-list">
+          <div class="empty-state">Carregando pedidos...</div>
+        </div>
+      </section>
+
+      <!-- QR Code Print View -->
+      <section class="view-section" id="view-qrcode" style="display:none">
+        <div class="view-header">
+          <h1>Imprimir QR Codes</h1>
+          <button class="btn btn-primary" onclick="window.print()">Imprimir</button>
+        </div>
+        <div class="section-block">
+          <p style="color:#7A6E62;margin-bottom:16px;">Gere QR Codes individuais para cada mesa. Imprima, recorte e cole nas mesas.</p>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Mesa inicial</label>
+              <input type="number" id="qr-mesa-inicio" class="form-input" value="1" min="1">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Mesa final</label>
+              <input type="number" id="qr-mesa-fim" class="form-input" value="10" min="1" max="99">
+            </div>
+          </div>
+          <button class="btn btn-primary" id="btn-gerar-qr-mesas">Gerar QR Codes</button>
+        </div>
+        <div id="qr-mesas-container" style="display:flex;flex-wrap:wrap;gap:24px;justify-content:center;padding:24px 0;"></div>
+      </section>
+
+      <!-- Reports View -->
+      <section class="view-section" id="view-reports" style="display:none">
+        <div class="view-header">
+          <h1>Relatórios</h1>
+          <a class="btn btn-secondary" id="btn-export-csv" href="#" download="relatorio-pedidos.csv">Exportar CSV</a>
+        </div>
+        <div class="stats-grid" id="reports-summary" style="grid-template-columns:repeat(3,1fr);">
+          <div class="stat-card"><div class="stat-content"><span class="stat-value" id="report-total-orders">0</span><span class="stat-label">Total Pedidos</span></div></div>
+          <div class="stat-card stat-card-success"><div class="stat-content"><span class="stat-value" id="report-revenue">R$ 0</span><span class="stat-label">Receita Total</span></div></div>
+          <div class="stat-card stat-card-highlight"><div class="stat-content"><span class="stat-value" id="report-avg-ticket">R$ 0</span><span class="stat-label">Ticket Médio</span></div></div>
+        </div>
+        <div class="dashboard-charts">
+          <div class="chart-card"><h3>Pedidos por Dia</h3><div class="chart-container" id="report-chart-orders"><div class="empty-state">Carregando...</div></div></div>
+          <div class="chart-card"><h3>Produtos Mais Vendidos</h3><div class="chart-container" id="report-chart-top"><div class="empty-state">Carregando...</div></div></div>
+        </div>
+        <div class="section-block"><h2>Pedidos por Status</h2><div id="report-status-list"><div class="empty-state">Carregando...</div></div></div>
+      </section>
+
+      <!-- Staff View (Admin only) -->
+      <section class="view-section" id="view-admin-staff" style="display:none">
+        <div class="view-header">
+          <h1>Gerenciar Equipe</h1>
+          <button class="btn btn-primary" id="btn-add-staff">+ Novo Membro</button>
+        </div>
+        <div class="section-block">
+          <div class="table-responsive">
+            <table class="data-table" id="staff-table">
+              <thead><tr><th>Nome</th><th>Email</th><th>Função</th><th>Criado em</th></tr></thead>
+              <tbody id="staff-tbody"><tr><td colspan="4" class="empty-cell">Carregando...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
       <section class="view-section" id="view-config" style="display:none">
         <div class="view-header">
           <h1>Configurações do Restaurante</h1>
@@ -306,6 +423,58 @@
                 <button class="btn btn-secondary" id="btn-copy-link">Copiar Link</button>
                 <a href="#" class="btn btn-primary" id="btn-view-menu" target="_blank" style="display:none">Ver Cardápio</a>
               </div>
+            </div>
+          </div>
+          <div class="section-block">
+            <h2>Personalização (White-label)</h2>
+            <p style="color:#7A6E62;font-size:13px;margin-bottom:16px;">Personalize as cores e fontes do seu cardápio. Disponível em todos os planos.</p>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Cor Principal</label>
+                <input type="color" id="config-primary-color" class="form-input" value="#FF4500" style="height:48px;padding:4px;">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Cor Secundária</label>
+                <input type="color" id="config-secondary-color" class="form-input" value="#16A34A" style="height:48px;padding:4px;">
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Fonte do Cardápio</label>
+              <select id="config-font" class="form-input">
+                <option value="Instrument Sans">Instrument Sans (Padrão)</option>
+                <option value="Inter">Inter</option>
+                <option value="Playfair Display">Playfair Display</option>
+                <option value="DM Sans">DM Sans</option>
+                <option value="Space Grotesk">Space Grotesk</option>
+              </select>
+            </div>
+          </div>
+          <div class="section-block">
+            <h2>Cardápio por Período</h2>
+            <p style="color:#7A6E62;font-size:13px;margin-bottom:16px;">Configure quais categorias aparecem em cada período do dia. O cardápio do cliente se adapta automaticamente.</p>
+            <div id="schedules-list" class="schedules-list"><div class="empty-state">Carregando...</div></div>
+            <div style="margin-top:16px;display:flex;gap:12px;flex-wrap:wrap;align-items:end;">
+              <div class="form-group" style="margin-bottom:0;flex:1;min-width:120px;">
+                <label class="form-label">Período</label>
+                <select id="schedule-period" class="form-input">
+                  <option value="Café da Manhã">☕ Café da Manhã</option>
+                  <option value="Almoço">🍽️ Almoço</option>
+                  <option value="Jantar">🌙 Jantar</option>
+                </select>
+              </div>
+              <div class="form-group" style="margin-bottom:0;flex:1;min-width:100px;">
+                <label class="form-label">Início</label>
+                <input type="time" id="schedule-start" class="form-input" value="06:00">
+              </div>
+              <div class="form-group" style="margin-bottom:0;flex:1;min-width:100px;">
+                <label class="form-label">Fim</label>
+                <input type="time" id="schedule-end" class="form-input" value="23:00">
+              </div>
+              <div class="form-group" style="margin-bottom:0;flex:1;min-width:120px;">
+                <label class="form-label">Categorias</label>
+                <input type="text" id="schedule-cats" class="form-input" placeholder="Ex: Café, Bebidas">
+              </div>
+              <button class="btn btn-primary" id="btn-add-schedule" style="white-space:nowrap;">+ Adicionar</button>
             </div>
           </div>
         </div>
@@ -480,7 +649,7 @@
       <div class="modal-content modal-lg">
         <div class="modal-header">
           <h2 id="modal-product-title">Novo Produto</h2>
-          
+          <button class="modal-close-icon" data-modal="modal-product">&times;</button>
         </div>
         <div class="modal-body">
           <form id="product-form" class="config-form">
@@ -523,6 +692,16 @@
                 <input type="checkbox" id="prod-destaque"> Produto em Destaque
               </label>
             </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Validade (início)</label>
+                <input type="date" id="prod-valid-from" class="form-input">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Validade (fim)</label>
+                <input type="date" id="prod-valid-until" class="form-input">
+              </div>
+            </div>
             <div class="form-group">
               <label for="prod-image">Imagem do Produto</label>
               <input type="file" id="prod-image" accept="image/*" class="form-file-input">
@@ -541,7 +720,7 @@
       <div class="modal-content modal-sm">
         <div class="modal-header">
           <h2>Excluir Produto</h2>
-          
+          <button class="modal-close-icon" data-modal="modal-delete-product">&times;</button>
         </div>
         <div class="modal-body">
           <p>Tem certeza que deseja excluir o produto <strong id="delete-product-name"></strong>?</p>
@@ -559,7 +738,7 @@
       <div class="modal-content modal-sm">
         <div class="modal-header">
           <h2>QR Code do Menu</h2>
-          
+          <button class="modal-close-icon" data-modal="modal-qrcode">&times;</button>
         </div>
         <div class="modal-body">
           <div id="modal-qrcode-container"></div>
@@ -575,7 +754,7 @@
       <div class="modal-content modal-md">
         <div class="modal-header">
           <h2>Novo Restaurante</h2>
-          
+          <button class="modal-close-icon" data-modal="modal-admin-restaurant">&times;</button>
         </div>
         <div class="modal-body">
           <form id="admin-restaurant-create-form" class="config-form">
@@ -610,7 +789,7 @@
       <div class="modal-content modal-sm">
         <div class="modal-header">
           <h2>Excluir Restaurante</h2>
-          
+          <button class="modal-close-icon" data-modal="modal-delete-restaurant">&times;</button>
         </div>
         <div class="modal-body">
           <p>Tem certeza que deseja excluir o restaurante <strong id="delete-rest-name"></strong>?</p>
@@ -628,7 +807,7 @@
       <div class="modal-content modal-md">
         <div class="modal-header">
           <h2>Descrição Gerada por IA</h2>
-          
+          <button class="modal-close-icon" data-modal="ai-result-modal">&times;</button>
         </div>
         <div class="modal-body">
           <div id="ai-result-content"></div>
@@ -648,5 +827,6 @@
   <script src="js/auth.js"></script>
   <script src="js/ai.js"></script>
   <script src="js/app.js"></script>
+  <script>if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/sw.js').catch(function(e){}); }</script>
 </body>
 </html>

@@ -178,6 +178,14 @@
     if (restaurant.category) info.appendChild(category);
     info.appendChild(badge);
 
+    // Business hours
+    if (restaurant.business_hours) {
+      var hoursEl = document.createElement('div');
+      hoursEl.className = 'business-hours';
+      hoursEl.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> ' + escapeHtml(restaurant.business_hours);
+      info.appendChild(hoursEl);
+    }
+
     container.appendChild(info);
 
     return container;
@@ -234,6 +242,17 @@
       img.src = product.image_url;
       img.alt = product.name || '';
       img.loading = 'lazy';
+      img.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var ov = document.createElement('div');
+        ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:99999;display:flex;align-items:center;justify-content:center;cursor:zoom-out;';
+        ov.addEventListener('click', function () { ov.remove(); });
+        var fi = document.createElement('img');
+        fi.src = img.src;
+        fi.style.cssText = 'max-width:92vw;max-height:92vh;border-radius:12px;object-fit:contain;box-shadow:0 20px 60px rgba(0,0,0,0.5);';
+        ov.appendChild(fi);
+        document.body.appendChild(ov);
+      });
       img.addEventListener('error', function () {
         imgWrap.innerHTML = '<div class="product-img-placeholder"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div>';
       });
@@ -488,8 +507,15 @@
       cleaned = '55' + cleaned;
     }
     
+    var table = document.getElementById('cart-table');
+    var obs = document.getElementById('cart-obs');
+    var tableNum = table ? table.value.trim() : '';
+    var obsText = obs ? obs.value.trim() : '';
+
     var lines = [];
     lines.push('*Pedido - ' + (restaurant.name || 'Restaurante') + '*');
+    if (tableNum) lines.push('*Mesa:* ' + tableNum);
+    if (obsText) lines.push('*Obs:* ' + obsText);
     lines.push('');
 
     for (var i = 0; i < window.cartItems.length; i++) {
@@ -501,6 +527,19 @@
 
     lines.push('');
     lines.push('*Total: ' + formatPrice(getCartTotal()) + '*');
+
+    // Also save order to server if API available
+    try {
+      api.saveOrder({
+        restaurant_id: restaurant.id,
+        table: tableNum,
+        observations: obsText,
+        items: window.cartItems.map(function (item) {
+          return { product_id: item.product.id, name: item.product.name, quantity: item.quantity, price: item.product.price };
+        }),
+        total: getCartTotal()
+      }).catch(function (e) { console.warn('Order save failed:', e); });
+    } catch (e) { console.warn('Order save error:', e); }
 
     var message = encodeURIComponent(lines.join('\n'));
     var url = 'https://wa.me/' + cleaned + '?text=' + message;
@@ -539,7 +578,37 @@
         return null;
       }
       restaurantData = r.data;
-      return api.fetchProducts(restaurantData.id);
+      // Load business hours from admin settings
+      return api.fetchAdminSettings().then(function (settings) {
+        if (settings && settings.data && settings.data.business_hours) {
+          restaurantData.business_hours = settings.data.business_hours;
+        }
+        // Load schedules for auto period detection
+        return api.fetchSchedules(restaurantData.id);
+      }).then(function (schedulesResult) {
+        var schedules = schedulesResult && schedulesResult.data ? schedulesResult.data : [];
+        // Auto-detect current period
+        var now = new Date();
+        var currentHour = now.getHours();
+        var currentMin = now.getMinutes();
+        var currentTime = ('0' + currentHour).slice(-2) + ':' + ('0' + currentMin).slice(-2);
+        var activePeriod = 'todos';
+        for (var i = 0; i < schedules.length; i++) {
+          var s = schedules[i];
+          if (currentTime >= s.start_time && currentTime <= s.end_time) {
+            activePeriod = s.period.toLowerCase();
+            if (activePeriod === 'café da manhã') activePeriod = 'cafe';
+            else if (activePeriod === 'almoço') activePeriod = 'almoço';
+            else if (activePeriod === 'jantar') activePeriod = 'jantar';
+            break;
+          }
+        }
+        // Only auto-select if schedules exist — otherwise show ALL products
+        // (the period buttons are still available for manual filtering)
+        if (schedules.length === 0) activePeriod = 'todos';
+        restaurantData._activePeriod = activePeriod;
+        return api.fetchProducts(restaurantData.id);
+      });
     }).catch(function (e) {
       console.error('Erro ao carregar cardápio:', e);
       var errorDiv = document.getElementById('error-state');
@@ -586,6 +655,35 @@
     root.appendChild(header);
 
     var activeCategory = 'Todas';
+    var searchTerm = '';
+    var activePeriod = restaurant._activePeriod || 'todos';
+    var allProducts = products;
+
+    function getFiltered() {
+      var filtered = allProducts;
+      // Period filter
+      if (activePeriod !== 'todos') {
+        var periodCategories = {
+          cafe: ['Café', 'Café da Manhã', 'Bebidas Quentes', 'Cafeteria'],
+          almoço: ['Pratos Principais', 'Entradas', 'Massas', 'Sobremesas', 'Saladas'],
+          jantar: ['Pratos Principais', 'Entradas', 'Massas', 'Bebidas', 'Combos', 'Porções']
+        };
+        var cats = periodCategories[activePeriod] || [];
+        if (cats.length) {
+          filtered = filtered.filter(function (p) { return cats.indexOf(p.category || '') !== -1; });
+        }
+      }
+      // Search
+      if (searchTerm) {
+        var term = searchTerm.toLowerCase();
+        filtered = filtered.filter(function (p) {
+          return (p.name || '').toLowerCase().indexOf(term) !== -1 ||
+                 (p.description || '').toLowerCase().indexOf(term) !== -1 ||
+                 (p.gourmet_name || '').toLowerCase().indexOf(term) !== -1;
+        });
+      }
+      return filtered;
+    }
 
     function reRenderContent(category) {
       var existingContent = root.querySelector('.menu-content');
@@ -594,7 +692,48 @@
       var content = document.createElement('div');
       content.className = 'menu-content';
 
-      var filter = renderCategoryFilter(products, category, function (cat) {
+      // Period filter
+      var periodBar = document.createElement('div');
+      periodBar.className = 'period-filter';
+      var periods = [
+        { id: 'todos', label: 'Todos' },
+        { id: 'cafe', label: '☕ Café' },
+        { id: 'almoço', label: '🍽️ Almoço' },
+        { id: 'jantar', label: '🌙 Jantar' }
+      ];
+      periods.forEach(function (p) {
+        var btn = document.createElement('button');
+        btn.className = 'period-btn' + (p.id === activePeriod ? ' active' : '');
+        btn.textContent = p.label;
+        btn.dataset.period = p.id;
+        btn.addEventListener('click', function () {
+          activePeriod = this.dataset.period;
+          reRenderContent(activeCategory);
+        });
+        periodBar.appendChild(btn);
+      });
+      content.appendChild(periodBar);
+
+      // Search bar
+      var searchWrap = document.createElement('div');
+      searchWrap.className = 'menu-search-wrap menu-search-icon';
+      var searchInput = document.createElement('input');
+      searchInput.className = 'menu-search-input';
+      searchInput.type = 'text';
+      searchInput.placeholder = 'Buscar no cardápio...';
+      searchInput.value = searchTerm;
+      searchInput.addEventListener('input', function () {
+        searchTerm = this.value;
+        var filtered = getFiltered();
+        var oldGrid = content.querySelector('.product-grid');
+        if (oldGrid) oldGrid.remove();
+        var newGrid = renderProductGrid(filtered, activeCategory);
+        content.appendChild(newGrid);
+      });
+      searchWrap.appendChild(searchInput);
+      content.appendChild(searchWrap);
+
+      var filter = renderCategoryFilter(getFiltered(), category, function (cat) {
         activeCategory = cat;
         var btns = content.querySelectorAll('.category-btn');
         for (var i = 0; i < btns.length; i++) {
@@ -602,13 +741,13 @@
         }
         var oldGrid = content.querySelector('.product-grid');
         if (oldGrid) oldGrid.remove();
-        var newGrid = renderProductGrid(products, cat);
+        var newGrid = renderProductGrid(getFiltered(), cat);
         content.appendChild(newGrid);
       });
 
       content.appendChild(filter);
 
-      var grid = renderProductGrid(products, category);
+      var grid = renderProductGrid(getFiltered(), category);
       content.appendChild(grid);
 
       root.appendChild(content);
@@ -641,6 +780,13 @@
     if (fab) fab.addEventListener('click', openCart);
     if (closeBtn) closeBtn.addEventListener('click', closeCart);
     if (backdrop) backdrop.addEventListener('click', closeCart);
+
+    // Auto-fill table number from URL
+    var mesaParam = getQueryParam('mesa');
+    if (mesaParam) {
+      var tableInput = document.getElementById('cart-table');
+      if (tableInput) tableInput.value = mesaParam;
+    }
 
     updateFabBadge();
     initMenu();
