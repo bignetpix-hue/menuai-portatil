@@ -1750,6 +1750,15 @@ document.addEventListener('DOMContentLoaded', function () {
     confirmBtn.addEventListener('click', handleConfirmDelete);
   }
 
+  // Novo produto button (bound once)
+  var novoBtn = document.getElementById('btn-novo-produto');
+  if (novoBtn && !novoBtn.dataset.bound) {
+    novoBtn.dataset.bound = '1';
+    novoBtn.addEventListener('click', function () {
+      openProductModal(null);
+    });
+  }
+
   document.getElementById('prod-search') && document.getElementById('prod-search').addEventListener('input', function () {
     currentPage = 1;
     applyFilters();
